@@ -73,12 +73,14 @@ PRU_SRAM volatile uint32_t shared_freq_3;
 
 /**
  * ### AE: ###
- * Taking CT_MCSPI0 register address, adding 0x128 to that address, 
- * then casting it to a volatile uint32_t pointer and finally taking 
+ * Taking CT_UART1 register address, adding 0x0 to that address, 
+ * then casting it to a volatile uint16_t pointer and finally taking 
  * the value that is pointed to by the address held in the pointer 
- * and using that value.
+ * and using that value. That should give us a direct access to the THR
+ * register of the UART1. So if we write to it, then the UART should shift
+ * out the written data.
  */
-#define UART1_MODULCTRL (*((volatile uint32_t*)(&CT_UART1 + 0x128)))
+#define UART1_THR (*((volatile uint16_t*)(&CT_UART1 + 0x0)))
 
 /* This is a char so that I can force access to R31.b0 for the host interrupt */
 volatile register uint8_t __R31;
@@ -109,16 +111,19 @@ int main(void)
 	/*****************************************************************/
 
 	/* Access PRCM (without CT) to initialize McSPI0 clock */
-	ptr_cm[SPI0_CLKCTRL] = ON;
+	ptr_cm[UART1_CLKCTRL] = ON;
 
 	/* Read McSPI0_MODULCTRL (offset 0x128)*/
-	result = MCSPI0_MODULCTRL;
+	//result = UART1_MODULCTRL;
+	/**
+	 * Somewhere here we should set up UART parameters (baud rate and stuff)
+	 */
 
-	/* Toggle MCSPI0_MODULCTRL[MS] (offset 0x128, bit 2) */
-	MCSPI0_MODULCTRL ^= 0x4;
+	/* Attempting to write lower case letter "a" to the TX of UART1 */
+	UART1_THR = 0x60;
 
 	/* Reset MCSPI0_MODULCTRL[MS] to original value */
-	MCSPI0_MODULCTRL = result;
+	//MCSPI0_MODULCTRL = result;
 
 	/*****************************************************************/
 	/* Access PRU Shared RAM using Constant Table                    */
