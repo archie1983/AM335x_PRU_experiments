@@ -37,7 +37,7 @@
 #include "resource_table_empty.h"
 
 /* Mapping Constant Table (CT) registers to variables */
-volatile far uint8_t CT_MCSPI0 __attribute__((cregister("MCSPI0", near), peripheral));
+volatile far uint8_t CT_UART1 __attribute__((cregister("UART1", near), peripheral));
 
 #ifndef PRU_SRAM
 #define PRU_SRAM __far __attribute__((cregister("PRU_SHAREDMEM", near)))
@@ -52,12 +52,33 @@ PRU_SRAM volatile uint32_t shared_freq_1;
 PRU_SRAM volatile uint32_t shared_freq_2;
 PRU_SRAM volatile uint32_t shared_freq_3;
 
-/* PRCM Registers */
+/**
+ * PRCM Registers
+ * ### AE: ###
+ * Page 1273 in SPRUH73P–October 2011–Revised March 2017
+ */
 #define CM_PER_BASE	((volatile uint8_t *)(0x44E00000))
-#define SPI0_CLKCTRL  (0x4C)
+
+/**
+ * ### AE: ###
+ * Page 1250 in SPRUH73P–October 2011–Revised March 2017
+ */
+#define UART1_CLKCTRL (0x6C)
+
+/**
+ * ### AE: ###
+ * Page 1273 in SPRUH73P–October 2011–Revised March 2017
+ */
 #define ON (0x2)
 
-#define MCSPI0_MODULCTRL (*((volatile uint32_t*)(&CT_MCSPI0 + 0x128)))
+/**
+ * ### AE: ###
+ * Taking CT_MCSPI0 register address, adding 0x128 to that address, 
+ * then casting it to a volatile uint32_t pointer and finally taking 
+ * the value that is pointed to by the address held in the pointer 
+ * and using that value.
+ */
+#define UART1_MODULCTRL (*((volatile uint32_t*)(&CT_UART1 + 0x128)))
 
 /* This is a char so that I can force access to R31.b0 for the host interrupt */
 volatile register uint8_t __R31;
