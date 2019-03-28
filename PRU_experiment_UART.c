@@ -180,7 +180,7 @@ int main(void)
 	//# UART_LCR[2] NB_STOP = 0 (1 stop bit)
 	//# UART_LCR[1:0] CHAR_LENGTH = 0x3 (data bits = 8)
 	UART1_LCR = 0x3;
-	//# refer to 19.3.8, page 4342; 19.2.2, page 4320 and 19.3.7.2, page 4339.
+	//# refer to 19.3.8, page 4342; 19.2.2, page 4320 and 19.3.7.2, page 4339 of SPRUH73P–October 2011–Revised March 2017
 	UART1_MDR1 = 0x0; //# loading the new UART mode: UART_MDR1[2:0] MODE_SELECT = 0 to enable UART 16x mode
 
 	/*****************************************************************/
