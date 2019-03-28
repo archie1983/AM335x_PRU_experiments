@@ -156,8 +156,8 @@ int main(void)
 	//# Setting UART_DLL[7:0] CLOCK_LSB and UART_DLH[5:0] CLOCK_MSB fields to the desired values to load the new divisor value
 	//# We're aiming for 115200 baud rate, so DLL = 0x1A and DLH = 0x0 as described in section 19.3.8.1.2, page 4344 of
 	//# SPRUH73P–October 2011–Revised March 2017
-	UART_DLL = 0x1a;
-	UART_DLH = 0x0;
+	UART1_DLL = 0x1a;
+	UART1_DLH = 0x0;
 	UART1_LCR = 0x0; //# switching to register operational mode to access the UART_IER register.
 	//# Loading the new interrupt configuration and other UART settings
 	//# UARTi.UART_IER[7] CTS_IT
@@ -168,9 +168,9 @@ int main(void)
 	//# UARTi.UART_IER[2] LINE_STS_IT
 	//# UARTi.UART_IER[1] THR_IT
 	//# UARTi.UART_IER[0] RHR_IT
-	UART_IER = 0x0; //# for now disabling all interupts (as we only have TX, RX and ground lines anyway) and disabling sleep mode
+	UART1_IER = 0x0; //# for now disabling all interupts (as we only have TX, RX and ground lines anyway) and disabling sleep mode
 	UART1_LCR = 0xbf; //# entering configuration mode B to access UART_EFR register
-	UART_EFR = (UART_EFR & 0xffef) | (uart_efr_val & 0x10); //# restoring UART_EFR[4] ENHANCED_EN value saved earlier
+	UART1_EFR = (UART1_EFR & 0xffef) | (uart_efr_val & 0x10); //# restoring UART_EFR[4] ENHANCED_EN value saved earlier
 	//# loading new protocol formatting: 
 	//# UART_LCR[7] DIV_EN = 0 (normal operation)
 	//# UART_LCR[6] BREAK_EN = 0 (normal operation)
