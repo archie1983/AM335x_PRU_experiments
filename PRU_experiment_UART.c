@@ -149,7 +149,8 @@ int main(void)
 	UART1_MDR1 = (tmp_val & 0xfff8) | 0x7; //# setting the bottom 3 bits to 1 to disable UART
 	UART1_LCR = 0xbf; //# entering configuration mode B to access UART_EFR register
 	uart_efr_val = UART1_EFR; //# saving UART_EFR, because later we'll need to restore the UART_EFR.ENHANCED_EN value (UART1_EFR >> 4 & 0x1)
-	UART1_EFR = uart_efr_val & 0xffef; //# setting bit 4 (UART_EFR.ENHANCED_EN) to 1 to enable access to UART_IER[7:4] register
+	//UART1_EFR = uart_efr_val & 0xffef; //# setting bit 4 (UART_EFR.ENHANCED_EN) to 1 to enable access to UART_IER[7:4] register
+	UART1_EFR = uart_efr_val | 0x10; //# setting bit 4 (UART_EFR.ENHANCED_EN) to 1 to enable access to UART_IER[7:4] register
 	UART1_LCR = 0x0; //# switching to register operational mode to access the UART_IER register.
 	UART1_IER = 0x0; //# clearing UART_IER register (setting UART_IER[4] SLEEP_MODE bit to 0) to change UART_DLL and UART_DLH registers
 	UART1_LCR = 0xbf; //# entering configuration mode B to access UART_DLL and UART_DLH registers
