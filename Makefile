@@ -4,7 +4,7 @@
 #
 PROJ_NAME=ae
 #PROJ_NAME=$1
-PRU0_PROJ=PRU_experiment_UART
+PRU0_PROJ=PRU_experiment_CAN
 PRU1_PROJ=button_led1
 
 # PRU_CGT environment variable must point to the TI PRU compiler directory.

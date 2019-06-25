@@ -58,18 +58,18 @@ PRU_SRAM volatile uint32_t shared_freq_3;
  * IF1 command register to specify what we want to update in the CAN data 
  * object (receive object, transmit object or remote frame receive object)
  */
-#define IF1CMD (*((volatile uint16_t*)(&CT_DCAN0 + 0x100)))
+#define IF1CMD (*((volatile uint32_t*)(&CT_DCAN0 + 0x100)))
 
 /** 
  * Arbitration bits (kind of like address, which is also a priority) for message 
  * object as described in page 4852 of user's guide 
  */
-#define IF1ARB (*((volatile uint16_t*)(&CT_DCAN0 + 0x108)))
+#define IF1ARB (*((volatile uint32_t*)(&CT_DCAN0 + 0x108)))
 
 /**
  * Mask register bits (affecting arbitration bits to decide what we will accept and what not).
  */
-#define IF1MSK (*((volatile uint16_t*)(&CT_DCAN0 + 0x104)))
+#define IF1MSK (*((volatile uint32_t*)(&CT_DCAN0 + 0x104)))
 
 /**
  * Message control register (allows us to set the frame data and start transmission amongst other things).
@@ -79,33 +79,33 @@ PRU_SRAM volatile uint32_t shared_freq_3;
 /**
  * The first 4 bytes of the actual message data.
  */
-#define IF1DATA (*((volatile uint16_t*)(&CT_DCAN0 + 0x110)))
+#define IF1DATA (*((volatile uint32_t*)(&CT_DCAN0 + 0x110)))
 
 /**
  * The last 4 bytes of the actual message data.
  */
-#define IF1DATB (*((volatile uint16_t*)(&CT_DCAN0 + 0x114)))
+#define IF1DATB (*((volatile uint32_t*)(&CT_DCAN0 + 0x114)))
 
 /**
  * Same for IF2 and IF3 interfaces
  */
-#define IF2CMD (*((volatile uint16_t*)(&CT_DCAN0 + 0x120)))
-#define IF2MSK (*((volatile uint16_t*)(&CT_DCAN0 + 0x124)))
-#define IF2ARB (*((volatile uint16_t*)(&CT_DCAN0 + 0x128)))
+#define IF2CMD (*((volatile uint32_t*)(&CT_DCAN0 + 0x120)))
+#define IF2MSK (*((volatile uint32_t*)(&CT_DCAN0 + 0x124)))
+#define IF2ARB (*((volatile uint32_t*)(&CT_DCAN0 + 0x128)))
 #define IF2MCTL (*((volatile uint16_t*)(&CT_DCAN0 + 0x12C)))
-#define IF2DATA (*((volatile uint16_t*)(&CT_DCAN0 + 0x130)))
-#define IF2DATB (*((volatile uint16_t*)(&CT_DCAN0 + 0x134)))
+#define IF2DATA (*((volatile uint32_t*)(&CT_DCAN0 + 0x130)))
+#define IF2DATB (*((volatile uint32_t*)(&CT_DCAN0 + 0x134)))
 
 /**
  * In IF3 case we don't have an IF3CMD register and we're allowed to set
  * IF3 registers on the go as we please. We do have IF3OBS register that
  * tells us of received data (fields that have changed).
  */
-#define IF3MSK (*((volatile uint16_t*)(&CT_DCAN0 + 0x144)))
-#define IF3ARB (*((volatile uint16_t*)(&CT_DCAN0 + 0x148)))
+#define IF3MSK (*((volatile uint32_t*)(&CT_DCAN0 + 0x144)))
+#define IF3ARB (*((volatile uint32_t*)(&CT_DCAN0 + 0x148)))
 #define IF3MCTL (*((volatile uint16_t*)(&CT_DCAN0 + 0x14C)))
-#define IF3DATA (*((volatile uint16_t*)(&CT_DCAN0 + 0x150)))
-#define IF3DATB (*((volatile uint16_t*)(&CT_DCAN0 + 0x154)))
+#define IF3DATA (*((volatile uint32_t*)(&CT_DCAN0 + 0x150)))
+#define IF3DATB (*((volatile uint32_t*)(&CT_DCAN0 + 0x154)))
 
 /* This is a char so that I can force access to R31.b0 for the host interrupt */
 volatile register uint8_t __R31;
@@ -117,7 +117,7 @@ int main(void)
 {
 	uint32_t result;
 	volatile uint8_t *ptr_cm;
-	uint16_t tmp_val, uart_efr_val;
+	uint16_t tmp_val;
 
 	ptr_cm = CM_PER_BASE;
 
