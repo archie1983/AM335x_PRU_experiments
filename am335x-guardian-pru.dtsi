@@ -20,13 +20,16 @@
 			0x0b4 0x05	/* lcd_data5, OMAP_MUX_MODE5 | AM33XX_PIN_OUTPUT, PRU CAPE RGB_2 LED, HDMI Conf. */
                         AM33XX_IOPAD(0x980, PIN_INPUT | MUX_MODE0) /* (D16) uart1_rxd.uart1_rxd */
                         AM33XX_IOPAD(0x984, PIN_OUTPUT | MUX_MODE0) /* (D15) uart1_txd.uart1_txd */
-                        AM33XX_IOPAD(0x978, PIN_INPUT | MUX_MODE0) /* (D18) uart1_ctsn.uart1_ctsn */
-                        AM33XX_IOPAD(0x97c, PIN_OUTPUT | MUX_MODE0) /* (D17) uart1_rtsn.uart1_rtsn */
+                        AM33XX_IOPAD(0x978, PIN_OUTPUT | MUX_MODE2) /* (D18) dcan0_tx */
+                        AM33XX_IOPAD(0x97c, PIN_INPUT | MUX_MODE2) /* (D17) dcan0_rx */
                         AM33XX_IOPAD(0x880, PIN_OUTPUT | MUX_MODE5) /* (U9) gpmc_csn1.pr1_pru1_pru_r30[12] - AE Signal for Phytec PCM-953 LED1*/
                         AM33XX_IOPAD(0x884, PIN_OUTPUT | MUX_MODE5) /* (V9) gpmc_csn2.pr1_pru1_pru_r30[13] - AE Signal for Phytec PCM-953 LED2*/
 		>;
 	};
 };
+
+                       /* AM33XX_IOPAD(0x978, PIN_INPUT | MUX_MODE0) */ /* (D18) uart1_ctsn.uart1_ctsn */
+                       /* AM33XX_IOPAD(0x97c, PIN_OUTPUT | MUX_MODE0) */ /* (D17) uart1_rtsn.uart1_rtsn */
 
 &pruss {
         pinctrl-names = "default";
