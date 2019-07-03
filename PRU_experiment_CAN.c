@@ -1,7 +1,22 @@
 #include <stdint.h>
 #include <pru_cfg.h>
 #include <pru_ctrl.h>
+#include <pru_intc.h>
 #include "resource_table_empty.h"
+
+/**
+ * Defines for communication with the other PRU core (PRU1)
+ */
+#define PRU0_PRU1_EVT		(16)
+/**
+ * PRU can trigger events 16-31 which map to 0-15 in R31[4:0] register.
+ * The bit1 in 6th position (0x100000) is the ISR bit (the bit that raises the particular event)
+ *
+ * See page 210 in SPRUH73O–October 2011–Revised September 2016
+ */
+#define PRU0_PRU1_TRIGGER	(__R31 = (PRU0_PRU1_EVT - 16) | (1 << 5))
+#define LONG_CYCLE      (5000000)
+#define SHORT_CYCLE     (500000)
 
 /* Mapping Constant Table (CT) registers to variables. DCAN0 = 0x481CC000 */
 volatile far uint8_t CT_DCAN0 __attribute__((cregister("DCAN0", near), peripheral));
@@ -27,6 +42,9 @@ PRU_SRAM volatile uint32_t shared_freq_3;
  * From here on we'll refer to SPRUH73P–October 2011–Revised March 2017 as "user's guide"
  */
 #define CM_PER_BASE	((volatile uint8_t *)(0x44E00000))
+
+#define CONTROL_MODULE ((volatile uint8_t *)(0x44E10000))
+#define CTRL_MOD_DCAN_RAMINIT_offset (0x644)
 
 /**
  * ### AE: ###
@@ -120,12 +138,32 @@ volatile register uint8_t __R31;
 
 void setUpCANTimings();
 void configureCANObjects();
+void configIntc(void);
+void pokePRU1Processor(void);
+void transmitDataFrame(void);
+void init_dcan_ram();
 
 int main(void)
 {
 	uint32_t result;
 	volatile uint8_t *ptr_cm;
-	uint32_t tmp_val;
+
+	/**
+	 * Infrastructure for communication to PRU1
+	 */
+	/* Configure GPI and GPO as Mode 0 (Direct Connect) */
+	CT_CFG.GPCFG0 = 0x0000;
+
+	/* Clear GPO pins */
+	//__R30 &= 0xFFFF0000;
+
+	/* Configure INTC */
+	configIntc();
+	
+	/**
+	 * First trigger to PRU1
+	 */
+	pokePRU1Processor();
 
 	ptr_cm = CM_PER_BASE;
 
@@ -176,18 +214,14 @@ int main(void)
 
 	/* Attempting to send a CAN data frame and a remote frame once every second */
 	while (1) {
-		setUpCANTimings();
-		configureCANObjects();
+		//setUpCANTimings();
+		//configureCANObjects();
 
 		__delay_cycles(100000000); //# 500ms wait
 
-		//IF1MCTL = tmp_val | 0x8100; //# Requesting a transmit by setting the TxRqst and NewDat flags
-		tmp_val = IF1CMD; //# 0xF30001
-		IF1CMD = tmp_val | 0x840000; //# Setting IF1CMD[23] = WR_RD = 1 and IF1CMD[18] = TxRqst_NewDat = 1 to start a data frame transmission
-		tmp_val = IF1CMD;
-		IF1CMD = tmp_val | 0x1; //# Setting IF1CMD[7:0] = message_number to start data transfer from IF register to RAM, which will
-								//# also set the TxRqst flag and actually start the data frame transmission
-		while (IF1CMD & 0x8000 > 0); //# waiting until the IF1 registers are transmitted to DCAN RAM, which will start CAN data frame transmission
+		transmitDataFrame();
+
+		pokePRU1Processor();
 
 		__delay_cycles(100000000); //# 500ms wait
 
@@ -203,6 +237,29 @@ int main(void)
 	__halt();
 }
 
+void transmitDataFrame() {
+	uint32_t tmp_val;
+
+	//IF1MCTL = tmp_val | 0x8100; //# Requesting a transmit by setting the TxRqst and NewDat flags
+	tmp_val = IF1CMD; //# 0xF30001
+	IF1CMD = tmp_val | 0x840000; //# Setting IF1CMD[23] = WR_RD = 1 and IF1CMD[18] = TxRqst_NewDat = 1 to start a data frame transmission
+	tmp_val = IF1CMD;
+	IF1CMD = tmp_val | 0x1; //# Setting IF1CMD[7:0] = message_number to start data transfer from IF register to RAM, which will
+							//# also set the TxRqst flag and actually start the data frame transmission
+	while ((IF1CMD & 0x8000) == 0x8000); //# waiting until the IF1 registers are transmitted to DCAN RAM, which will start CAN data frame transmission
+}
+
+/**
+ * When we 'poke' the PRU1 processor once, it will start flashing the LEDs on the Phytec board much
+ * faster and it will look like they're glowing continuously. When we 'poke' it again, the LEDs
+ * flashing frequency will get back to normal flashing state, that is discernible with a naked eye.
+ * 'Poking' it again will repeat it again.
+ */
+void pokePRU1Processor() {
+	PRU0_PRU1_TRIGGER;
+	__delay_cycles(100000000); //# 500ms wait
+}
+
 void setUpCANTimings() {
 	uint32_t tmp_val;
 
@@ -216,27 +273,75 @@ void setUpCANTimings() {
 	 *
 	 * Now we want to reset the DCAN0 peripheral so that we start from a clean sheet
 	 * and get the init bit set in control register as described on page 4814 in user's manual.
+     *
+	 * DCAN0_CTL[31:26] : Reserved
+	 * DCAN0_CTL[25] = WUBA = 0 : Don't define auto wake-up from low-power mode upon receiving dominant CAN bus level
+	 * DCAN0_CTL[24] = PDR = 0 : Not requesting local low-power mode
+	 * DCAN0_CTL[23:21] : Reserved
+	 * DCAN0_CTL[20] = DE3 = 0 : No DMA request line for IF3
+	 * DCAN0_CTL[19] = DE2 = 0 : No DMA request line for IF2
+	 * DCAN0_CTL[18] = DE1 = 0 : No DMA request line for IF1
+	 * DCAN0_CTL[17] = IE1 = 0 : Interrupt line 1 not enabled
+	 * DCAN0_CTL[16] = InitDbg = 0 : Not in debug mode
+	 * DCAN0_CTL[15] = SWR = 1 : Module is forced to reset state
+	 * DCAN0_CTL[14] : Reserved
+	 * DCAN0_CTL[13:10] = PMD = 0 : Parity on atm (anything other than 5 here switches parity on), but will probably disable later
+	 * DCAN0_CTL[9] = ABO = 0 : Auto-Bus-On feature (to automatically try to recover from errors): Off for now, but will set it later
+	 * DCAN0_CTL[8] = IDS = 0 : Not to enter debug mode immediately, but to wait for frame completion (only if debug/suspend mode is requested)
+	 * DCAN0_CTL[7] = TEST = 0 : Test mode (off for now, but will set it later)
+	 * DCAN0_CTL[6] = CCE = 0 : Configuration changes (disabled for now, but will enable later)
+	 * DCAN0_CTL[5] = DAR = 0 : Auto retransmission of unsuccessful messages (off for now, but will enable later)
+	 * DCAN0_CTL[4] : Reserved
+	 * DCAN0_CTL[3] = EIE = 0 : Errors to not generate interrupts
+	 * DCAN0_CTL[2] = SIE = 0 : Status changes to not generate interrupts
+	 * DCAN0_CTL[1] = IE0 = 0 : Interrupt line 1 disabled
+	 * DCAN0_CTL[0] = Init = 1 : Initialisation mode is entered
 	 */
-	DCAN0_CTL = 0x8001;
-	//DCAN0_CTL = 0x8081; //# AE for now we'll be putting it in TEST mode
+	//DCAN0_CTL = 0x8001;
+	DCAN0_CTL = 0x0001;
+
+	DCAN0_CTL = 0x0041;
 	
 	/**
 	 * waiting for init bit to be set
 	 */
-	while (DCAN0_CTL & 0x1 == 0);
+	while ((DCAN0_CTL & 0x1) == 0);
 
 	/**
 	 * Following workflow in figure 23-4 on page 4776 in user's manual to configure bit timing.
 	 * CCE = 1. Init bit too has to remain set.
+	 *
+	 * DCAN0_CTL[31:26] : Reserved
+	 * DCAN0_CTL[25] = WUBA = 0 : Don't define auto wake-up from low-power mode upon receiving dominant CAN bus level
+	 * DCAN0_CTL[24] = PDR = 0 : Not requesting local low-power mode
+	 * DCAN0_CTL[23:21] : Reserved
+	 * DCAN0_CTL[20] = DE3 = 0 : No DMA request line for IF3
+	 * DCAN0_CTL[19] = DE2 = 0 : No DMA request line for IF2
+	 * DCAN0_CTL[18] = DE1 = 0 : No DMA request line for IF1
+	 * DCAN0_CTL[17] = IE1 = 0 : Interrupt line 1 not enabled
+	 * DCAN0_CTL[16] = InitDbg = 0 : Not in debug mode
+	 * DCAN0_CTL[15] = SWR = 0 : Not resetting
+	 * DCAN0_CTL[14] : Reserved
+	 * DCAN0_CTL[13:10] = PMD = 0101 : Parity off
+	 * DCAN0_CTL[9] = ABO = 1 : Auto-Bus-On feature enabled
+	 * DCAN0_CTL[8] = IDS = 0 : Not to enter debug mode immediately, but to wait for frame completion (only if debug/suspend mode is requested)
+	 * DCAN0_CTL[7] = TEST = 1 : Test mode enabled
+	 * DCAN0_CTL[6] = CCE = 1 : Configuration changes enabled
+	 * DCAN0_CTL[5] = DAR = 1 : Auto retransmission of unsuccessful messages enabled
+	 * DCAN0_CTL[4] : Reserved
+	 * DCAN0_CTL[3] = EIE = 0 : Errors to not generate interrupts
+	 * DCAN0_CTL[2] = SIE = 0 : Status changes to not generate interrupts
+	 * DCAN0_CTL[1] = IE0 = 0 : Interrupt line 1 disabled
+	 * DCAN0_CTL[0] = Init = 1 : Initialisation mode is entered
 	 */
 	//DCAN0_CTL = 0x41;
 	//DCAN0_CTL = 0xC1; //# with test mode
-	DCAN0_CTL = 0x14E1; //# with test mode enabled and parity mode disabled and auto retransmission disabled
+	DCAN0_CTL = 0x16E1; //# with test mode enabled and parity mode disabled and auto retransmission disabled
 
 	/**
 	 * waiting for init bit to be set
 	 */
-	while (DCAN0_CTL & 0x1 == 0);
+	while ((DCAN0_CTL & 0x1) == 0);
 
 	/**
 	 * Putting the DCAN0 peripheral into the external loopback mode.
@@ -349,13 +454,12 @@ void setUpCANTimings() {
 	 * Clear the CCE and Init bit.
 	 */
 	tmp_val = DCAN0_CTL;
-	//DCAN0_CTL = tmp_val & 0xffbe;
-	DCAN0_CTL = tmp_val & 0xffbe; //# with test mode
+	DCAN0_CTL = tmp_val & 0xffbe; //# resetting bits DCAN0_CTL[0] = Init = 0 and DCAN0_CTL[6] = CCE = 0
 
 	/**
 	 * waiting for init bit to be unset
 	 */
-	while (DCAN0_CTL & 0x1 == 1);
+	while ((DCAN0_CTL & 0x1) == 1);
 }
 
 void configureCANObjects() {
@@ -369,6 +473,7 @@ void configureCANObjects() {
 	 * Let's start with the transmit object.
 	 */
 
+	//init_dcan_ram();
 	/**
 	 * IF1ARB[31] = MsgVal = 0 : Message not valid yet. We need to set this to 1 after setting up mask bits and Umask = 1
 	 * IF1ARB[30] = Xtd = 0 : Standard identifier (not extended) is used 
@@ -416,7 +521,7 @@ void configureCANObjects() {
 
 	tmp_val = IF1ARB;
 	IF1ARB = 0x80000000 | tmp_val;
-	
+
 	/**
 	 * IF1CMD[31:24] = 0 : Reserved
 	 * IF1CMD[23] = 1 : Direction- write (from IF1 register set to the message object
@@ -460,6 +565,55 @@ void configureCANObjects() {
 	 * Just in case the IF registers are still transferring the data into the DCAN RAM,
 	 * we need to wait a little before sending off first data frame.
 	 */
-	 while (IF1CMD & 0x8000 > 0);
-	 while (IF2CMD & 0x8000 > 0);
+	 while ((IF1CMD & 0x8000) == 0x8000);
+	 while ((IF2CMD & 0x8000) == 0x8000);
+}
+
+/**
+ * Initialise DCAN0 ram. Doesn't work, because we need the main processor (Cortex A8) to be in privileged mode
+ * and I'm not sure yet how to set it to that mode from a PRU core (may not even be possible). I may need to
+ * do this kind of initialisation in the device tree or bootloader.
+ */
+void init_dcan_ram() {
+	volatile uint8_t *ptr_cm;
+
+	ptr_cm = CONTROL_MODULE;
+	ptr_cm[CTRL_MOD_DCAN_RAMINIT_offset] = 0x1;
+	while ((ptr_cm[CTRL_MOD_DCAN_RAMINIT_offset] & 0x100) == 0x0);
+}
+
+/* INTC configuration
+ * We are going to map User event 16 to Host 1
+ * PRU1 will then wait for r31 bit 31 (designates Host 1) to go high
+ * */
+void configIntc(void)
+{
+	/* Clear any pending PRU-generated events */
+	__R31 = 0x00000000;
+
+	/* Map event 16 to channel 1
+	 *
+	 * ??? We are setting up the event 16 to be routed to channel 1 (which goes to PRU1 as a PRU host interrupt)
+	 * */
+	CT_INTC.CMR4_bit.CH_MAP_16 = 1;
+
+	/* Map channel 1 to host 1
+	 *
+	 * ??? We are setting up the channel 1 to be routed to host1 (which is PRU1)
+	 * */
+	CT_INTC.HMR0_bit.HINT_MAP_1 = 1;
+
+	/* Ensure event 16 is cleared */
+	CT_INTC.SICR = 16;
+	/* Delay to ensure the event is cleared in INTC */
+	__delay_cycles(5);
+
+	/* Enable event 16 */
+	CT_INTC.EISR = 16;
+
+	/* Enable Host interrupt 1 */
+	CT_INTC.HIEISR |= (1 << 0);
+
+	// Globally enable host interrupts
+	CT_INTC.GER = 1;
 }
