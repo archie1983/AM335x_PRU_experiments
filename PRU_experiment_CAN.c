@@ -136,12 +136,13 @@ volatile register uint8_t __R31;
 /* PRU-to-ARM interrupt */
 #define PRU_ARM_INTERRUPT (19+16)
 
-void setUpCANTimings();
-void configureCANObjects();
+void setUpCANTimings(void);
+void configureCANObjects(void);
 void configIntc(void);
 void pokePRU1Processor(void);
 void transmitDataFrame(void);
-void init_dcan_ram();
+void init_dcan_ram(void);
+void disable_unused_dcan0_objects(void);
 
 int main(void)
 {
@@ -214,8 +215,8 @@ int main(void)
 
 	/* Attempting to send a CAN data frame and a remote frame once every second */
 	while (1) {
-		//setUpCANTimings();
-		//configureCANObjects();
+		setUpCANTimings();
+		configureCANObjects();
 
 		__delay_cycles(100000000); //# 500ms wait
 
@@ -297,8 +298,8 @@ void setUpCANTimings() {
 	 * DCAN0_CTL[1] = IE0 = 0 : Interrupt line 1 disabled
 	 * DCAN0_CTL[0] = Init = 1 : Initialisation mode is entered
 	 */
-	//DCAN0_CTL = 0x8001;
-	DCAN0_CTL = 0x0001;
+	DCAN0_CTL = 0x8001;
+	//DCAN0_CTL = 0x0001;
 
 	DCAN0_CTL = 0x0041;
 	
@@ -315,9 +316,9 @@ void setUpCANTimings() {
 	 * DCAN0_CTL[25] = WUBA = 0 : Don't define auto wake-up from low-power mode upon receiving dominant CAN bus level
 	 * DCAN0_CTL[24] = PDR = 0 : Not requesting local low-power mode
 	 * DCAN0_CTL[23:21] : Reserved
-	 * DCAN0_CTL[20] = DE3 = 0 : No DMA request line for IF3
-	 * DCAN0_CTL[19] = DE2 = 0 : No DMA request line for IF2
-	 * DCAN0_CTL[18] = DE1 = 0 : No DMA request line for IF1
+	 * DCAN0_CTL[20] = DE3 = 1 : No DMA request line for IF3
+	 * DCAN0_CTL[19] = DE2 = 1 : No DMA request line for IF2
+	 * DCAN0_CTL[18] = DE1 = 1 : No DMA request line for IF1
 	 * DCAN0_CTL[17] = IE1 = 0 : Interrupt line 1 not enabled
 	 * DCAN0_CTL[16] = InitDbg = 0 : Not in debug mode
 	 * DCAN0_CTL[15] = SWR = 0 : Not resetting
@@ -336,7 +337,7 @@ void setUpCANTimings() {
 	 */
 	//DCAN0_CTL = 0x41;
 	//DCAN0_CTL = 0xC1; //# with test mode
-	DCAN0_CTL = 0x16E1; //# with test mode enabled and parity mode disabled and auto retransmission disabled
+	DCAN0_CTL = 0x1C16E1; //# with test mode enabled and parity mode disabled and auto retransmission disabled
 
 	/**
 	 * waiting for init bit to be set
@@ -346,7 +347,8 @@ void setUpCANTimings() {
 	/**
 	 * Putting the DCAN0 peripheral into the external loopback mode.
 	 */
-	DCAN0_TEST = 0x300;
+	//DCAN0_TEST = 0x300;
+	DCAN0_TEST = 0x10;
 	
 	/**
 	 * Now the actual bit timing register value:
@@ -474,6 +476,7 @@ void configureCANObjects() {
 	 */
 
 	//init_dcan_ram();
+	disable_unused_dcan0_objects();
 	/**
 	 * IF1ARB[31] = MsgVal = 0 : Message not valid yet. We need to set this to 1 after setting up mask bits and Umask = 1
 	 * IF1ARB[30] = Xtd = 0 : Standard identifier (not extended) is used 
@@ -523,6 +526,25 @@ void configureCANObjects() {
 	IF1ARB = 0x80000000 | tmp_val;
 
 	/**
+	 * Similarly we set up the IF2 registers for the "receive" object
+	 */
+	IF2ARB = 0x15C80000; //# ID will be AE4 : 1010 1110 0100
+	IF2MSK = 0x3FE00000; //# We will only accept remote frames from address that contains 0xAE in the beginning
+	IF2MCTL = 0x1088; //# RmtEn == 0 because this object will not handle received remote frames
+	IF2DATA = 0x0;
+	IF2DATB = 0x0;
+
+	tmp_val = IF2ARB;
+	IF2ARB = 0x80000000 | tmp_val;
+
+	/**
+	 * And finally the IF3 registers for the "receive" object for remote frames
+	 */
+	IF3ARB = 0x95D00000; //# ID will be AE8 : 1010 1110 1000
+	IF3MSK = 0x3FE00000; //# We will only accept remote frames from address that contains 0xAE in the beginning
+	IF3MCTL = 0x1088;
+
+	/**
 	 * IF1CMD[31:24] = 0 : Reserved
 	 * IF1CMD[23] = 1 : Direction- write (from IF1 register set to the message object
 	 * addressed by Message Number bits (7:0)
@@ -539,27 +561,7 @@ void configureCANObjects() {
 	 * IF1CMD[7:0] = 1 : This will be message #1
 	 */
 	IF1CMD = 0xF30001;
-
-	/**
-	 * Similarly we set up the IF2 registers for the "receive" object
-	 */
-	IF2ARB = 0x15C80000; //# ID will be AE4 : 1010 1110 0100
-	IF2MSK = 0x3FE00000; //# We will only accept remote frames from address that contains 0xAE in the beginning
-	IF2MCTL = 0x1088; //# RmtEn == 0 because this object will not handle received remote frames
-	IF2DATA = 0x0;
-	IF2DATB = 0x0;
-
-	tmp_val = IF2ARB;
-	IF2ARB = 0x80000000 | tmp_val;
-	
 	IF2CMD = 0xF30002;
-
-	/**
-	 * And finally the IF3 registers for the "receive" object for remote frames
-	 */
-	IF3ARB = 0x95D00000; //# ID will be AE8 : 1010 1110 1000
-	IF3MSK = 0x3FE00000; //# We will only accept remote frames from address that contains 0xAE in the beginning
-	IF3MCTL = 0x1088;
 
 	/**
 	 * Just in case the IF registers are still transferring the data into the DCAN RAM,
@@ -567,6 +569,102 @@ void configureCANObjects() {
 	 */
 	 while ((IF1CMD & 0x8000) == 0x8000);
 	 while ((IF2CMD & 0x8000) == 0x8000);
+}
+
+void disable_unused_dcan0_objects() {
+	uint32_t tmp_val;
+	uint8_t current_address = 3;
+	
+	while (current_address < 0x81) {
+		/**
+		 * IF1ARB[31] = MsgVal = 0 : Message not valid yet. We need to set this to 1 after setting up mask bits and Umask = 1
+		 * IF1ARB[30] = Xtd = 0 : Standard identifier (not extended) is used 
+		 * IF1ARB[29] = Dir = 0 : Direction is "transmit" (on setting TxRqst to 1 this will send
+		 * out a data frame or a receipt of a matching ID remote frame will also trigger a send).
+		 * IF1ARB[28:18] = ID28_to_ID18 = 0xAE : our node ID in standard mode : 1010 1110
+		 * IF1ARB[17:0] = ID17_to_ID0 = 0 : we don't use extended ID mode, so extended ID bits are 0
+		 */
+		IF1ARB = 0;
+
+		/**
+		 * IF1MSK[31] = MXtd = 0 : Standard identifier (not extended):
+		 * IF1MSK[30] = MDir = 0 : Message direction NOT masked
+		 * IF1MSK[28:0] = MSk_28:0_ = 0 : Validate message, whose ID starts with 0xAE
+		 */
+		IF1MSK = 0;
+
+		/**
+		 * IF1MCTL[31:16] = 0 : Reserved
+		 * IF1MCTL[15] = NewDat = 0 : Setting "new data" flag to false
+		 * IF1MCTL[14] = MsgLst = 0 : No message has been lost
+		 * IF1MCTL[13] = IntPnd = 0 : No interrupt is pending
+		 * IF1MCTL[12] = UMask = 0 : Use acceptance mask (has to be true if we want to automatically answer remote frames).
+		 * IF1MCTL[11] = TxIE = 0 : Transmit interrupt not enabled (IntPnd not triggered after transmit of a frame)
+		 * IF1MCTL[10] = RxIE = 0 : Receive interrupt not enabled (IntPnd not triggered after reception of a frame)
+		 * IF1MCTL[9] = RmtEn = 0 : Automatically reply to a matching remote frame
+		 * IF1MCTL[8] = TxRqst = 0 : Transmit request not active at this point (don't want to send anything yet)
+		 * IF1MCTL[7] = EoB = 1 : This is the "end of buffer" data frame- i.e. we won't have a FIFO buffer as we only have one object anyway.
+		 * IF1MCTL[6:4] = 0 : Reserved
+		 * IF1MCTL[3:0] = 0x8 : DLC (data length code) : Data frame will have 8 bytes.
+		 */
+		IF1MCTL = 0x80;
+
+		/**
+		 * The first 4 bytes of data in the object. Since it's the transmit object,
+		 * we want to set the data before we make it active.
+		 */
+		IF1DATA = 0;
+
+		/**
+		 * The last 4 bytes of data in the object. Since it's the transmit object,
+		 * we want to set the data before we make it active.
+		 */
+		IF1DATB = 0;
+
+		/**
+		 * Similarly we set up the IF2 registers for the "receive" object
+		 */
+		IF2ARB = 0;
+		IF2MSK = 0;
+		IF2MCTL = 0x80;
+		IF2DATA = 0;
+		IF2DATB = 0;
+
+		/**
+		 * And finally the IF3 registers for the "receive" object for remote frames
+		 */
+		IF3ARB = 0;
+		IF3MSK = 0;
+		IF3MCTL = 0x80;
+
+		/**
+		 * IF1CMD[31:24] = 0 : Reserved
+		 * IF1CMD[23] = 1 : Direction- write (from IF1 register set to the message object
+		 * addressed by Message Number bits (7:0)
+		 * IF1CMD[22] = 1 : Change Mask bits in the message object
+		 * IF1CMD[21] = 1 : Change Arbitration bits in the message object
+		 * IF1CMD[20] = 1 : Change Access control bits in the message object
+		 * IF1CMD[19] = 0 : Ignore this bit. In write mode IntPnd is set by access control register later
+		 * IF1CMD[18] = 0 : In write mode TxRqst and NewDat will be set by access control register later
+		 * IF1CMD[17] = 1 : Change Data bits[3:0] in the message object
+		 * IF1CMD[16] = 1 : Change Data bits[7:4] in the message object
+		 * IF1CMD[15] = 0 : Clear the "busy" bit of this register (probably should be r/o anyway)
+		 * IF1CMD[14] = 0 : Not going to use DMA yet
+		 * IF1CMD[13:8] = 0 : Reserved
+		 * IF1CMD[7:0] = xxxxxxxx : Message number
+		 */
+		IF1CMD = 0xF30000 + current_address;
+		IF2CMD = 0xF30000 + current_address;
+
+		/**
+		 * Just in case the IF registers are still transferring the data into the DCAN RAM,
+		 * we need to wait a little before sending off first data frame.
+		 */
+		while ((IF1CMD & 0x8000) == 0x8000);
+		while ((IF2CMD & 0x8000) == 0x8000);
+
+		current_address++;
+	}
 }
 
 /**
