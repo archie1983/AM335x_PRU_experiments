@@ -164,7 +164,7 @@ int main(void)
 	/**
 	 * First trigger to PRU1
 	 */
-	pokePRU1Processor();
+	//pokePRU1Processor();
 
 	ptr_cm = CM_PER_BASE;
 
@@ -215,23 +215,17 @@ int main(void)
 
 	/* Attempting to send a CAN data frame and a remote frame once every second */
 	while (1) {
-		setUpCANTimings();
-		configureCANObjects();
+		//setUpCANTimings();
+		//configureCANObjects();
 
-		__delay_cycles(100000000); //# 500ms wait
+		//__delay_cycles(100000000); //# 500ms wait
 
 		transmitDataFrame();
+		transmitRemoteFrame();
 
-		pokePRU1Processor();
+		//pokePRU1Processor();
 
-		__delay_cycles(100000000); //# 500ms wait
-
-		//tmp_val = IF2CMD;
-		//IF2CMD = tmp_val | 0x840000; //# Setting IF2CMD[23] = WR_RD = 1 and IF2CMD[18] = TxRqst_NewDat = 1 to start a data frame transmission
-		//tmp_val = IF2CMD;
-		//IF2CMD = tmp_val | 0x1; //# Setting IF2CMD[7:0] = message_number to start data transfer from IF register to RAM, which will
-								//# also set the TxRqst flag and actually start the data frame transmission
-		//while (IF2CMD & 0x8000 > 0); //# waiting until the IF1 registers are transmitted to DCAN RAM, which will start CAN data frame transmission
+		//__delay_cycles(100000000); //# 500ms wait
 	}
 
 	/* Halt PRU core */
@@ -248,6 +242,16 @@ void transmitDataFrame() {
 	IF1CMD = tmp_val | 0x1; //# Setting IF1CMD[7:0] = message_number to start data transfer from IF register to RAM, which will
 							//# also set the TxRqst flag and actually start the data frame transmission
 	while ((IF1CMD & 0x8000) == 0x8000); //# waiting until the IF1 registers are transmitted to DCAN RAM, which will start CAN data frame transmission
+}
+
+void transmitRemoteFrame() {
+	uint32_t tmp_val;
+	tmp_val = IF2CMD;
+	IF2CMD = tmp_val | 0x840000; //# Setting IF2CMD[23] = WR_RD = 1 and IF2CMD[18] = TxRqst_NewDat = 1 to start a remote frame transmission
+	tmp_val = IF2CMD;
+	IF2CMD = tmp_val | 0x2; //# Setting IF2CMD[7:0] = message_number to start data transfer from IF register to RAM, which will
+							//# also set the TxRqst flag and actually start the remote frame transmission
+	while (IF2CMD & 0x8000 > 0); //# waiting until the IF2 registers are transferred to DCAN RAM, which will start CAN remote frame transmission
 }
 
 /**
@@ -316,9 +320,9 @@ void setUpCANTimings() {
 	 * DCAN0_CTL[25] = WUBA = 0 : Don't define auto wake-up from low-power mode upon receiving dominant CAN bus level
 	 * DCAN0_CTL[24] = PDR = 0 : Not requesting local low-power mode
 	 * DCAN0_CTL[23:21] : Reserved
-	 * DCAN0_CTL[20] = DE3 = 1 : No DMA request line for IF3
-	 * DCAN0_CTL[19] = DE2 = 1 : No DMA request line for IF2
-	 * DCAN0_CTL[18] = DE1 = 1 : No DMA request line for IF1
+	 * DCAN0_CTL[20] = DE3 = 0 : No DMA request line for IF3
+	 * DCAN0_CTL[19] = DE2 = 0 : No DMA request line for IF2
+	 * DCAN0_CTL[18] = DE1 = 0 : No DMA request line for IF1
 	 * DCAN0_CTL[17] = IE1 = 0 : Interrupt line 1 not enabled
 	 * DCAN0_CTL[16] = InitDbg = 0 : Not in debug mode
 	 * DCAN0_CTL[15] = SWR = 0 : Not resetting
@@ -337,7 +341,8 @@ void setUpCANTimings() {
 	 */
 	//DCAN0_CTL = 0x41;
 	//DCAN0_CTL = 0xC1; //# with test mode
-	DCAN0_CTL = 0x1C16E1; //# with test mode enabled and parity mode disabled and auto retransmission disabled
+	//DCAN0_CTL = 0x1C16E1; //# with test mode enabled and parity mode disabled and auto retransmission disabled
+	DCAN0_CTL = 0x16E1; //# with test mode enabled and parity mode disabled and auto retransmission disabled
 
 	/**
 	 * waiting for init bit to be set
@@ -346,9 +351,17 @@ void setUpCANTimings() {
 
 	/**
 	 * Putting the DCAN0 peripheral into the external loopback mode.
+	 * DCAN0_TEST[31:10] : Reserved
+	 * DCAN0_TEST[9] = RDA = 0 : RAM direct access disabled
+	 * DCAN0_TEST[8] = EXL = 0 : External loopback mode off
+	 * DCAN0_TEST[7] = Rx = 0 : Read only monitoring of Rx pin (0- dominant, 1- recessive)
+	 * DCAN0_TEST[6:5] = Tx_1:0_ = 00 : Normal operation - CAN_TX pin is controlled by the CAN core.
+	 * DCAN0_TEST[4] = LBack = 1 : Loopback mode enabled
+	 * DCAN0_TEST[3] = Silent = 0 : Not in silent mode
+	 * DCAN0_TEST[2:0] : Reserved
 	 */
-	//DCAN0_TEST = 0x300;
 	DCAN0_TEST = 0x10;
+	//DCAN0_TEST = 0x210;
 	
 	/**
 	 * Now the actual bit timing register value:
@@ -573,7 +586,7 @@ void configureCANObjects() {
 
 void disable_unused_dcan0_objects() {
 	uint32_t tmp_val;
-	uint8_t current_address = 3;
+	uint8_t current_address = 1;
 	
 	while (current_address < 0x81) {
 		/**
