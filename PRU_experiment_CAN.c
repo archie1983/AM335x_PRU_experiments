@@ -141,12 +141,12 @@ void configureCANObjects(void);
 void configIntc(void);
 void pokePRU1Processor(void);
 void transmitDataFrame(void);
+void transmitRemoteFrame(void);
 void init_dcan_ram(void);
 void disable_unused_dcan0_objects(void);
 
 int main(void)
 {
-	uint32_t result;
 	volatile uint8_t *ptr_cm;
 
 	/**
@@ -164,7 +164,7 @@ int main(void)
 	/**
 	 * First trigger to PRU1
 	 */
-	//pokePRU1Processor();
+	pokePRU1Processor(); //# so that I can see that it's started the initialisation phase
 
 	ptr_cm = CM_PER_BASE;
 
@@ -173,10 +173,10 @@ int main(void)
 	/*****************************************************************/
 
 	/* Clear SYSCFG[STANDBY_INIT] to enable OCP master port */
-	CT_CFG.SYSCFG_bit.STANDBY_INIT = 0;
+	//CT_CFG.SYSCFG_bit.STANDBY_INIT = 0;
 
 	/* Read IEPCLK[OCP_EN] for IEP clock source */
-	result = CT_CFG.IEPCLK_bit.OCP_EN;
+	//while (CT_CFG.IEPCLK_bit.OCP_EN == 1);
 
 
 	/*****************************************************************/
@@ -213,6 +213,8 @@ int main(void)
 		shared_freq_2 = shared_freq_3;
 
 
+	pokePRU1Processor(); //# so that I can see that it has gone through initialisation
+
 	/* Attempting to send a CAN data frame and a remote frame once every second */
 	while (1) {
 		//setUpCANTimings();
@@ -229,7 +231,7 @@ int main(void)
 	}
 
 	/* Halt PRU core */
-	__halt();
+	//__halt();
 }
 
 void transmitDataFrame() {
@@ -585,7 +587,6 @@ void configureCANObjects() {
 }
 
 void disable_unused_dcan0_objects() {
-	uint32_t tmp_val;
 	uint8_t current_address = 1;
 	
 	while (current_address < 0x81) {
