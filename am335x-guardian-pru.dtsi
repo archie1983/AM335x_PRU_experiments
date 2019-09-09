@@ -24,6 +24,8 @@
                         AM33XX_IOPAD(0x97c, PIN_INPUT | MUX_MODE2) /* (D17) dcan0_rx */
                         AM33XX_IOPAD(0x880, PIN_OUTPUT | MUX_MODE5) /* (U9) gpmc_csn1.pr1_pru1_pru_r30[12] - AE Signal for Phytec PCM-953 LED1*/
                         AM33XX_IOPAD(0x884, PIN_OUTPUT | MUX_MODE5) /* (V9) gpmc_csn2.pr1_pru1_pru_r30[13] - AE Signal for Phytec PCM-953 LED2*/
+                        AM33XX_IOPAD(0x820, PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (U10) gpmc_ad8.gpio0[22] - AE pulling SFS mode pin down to enable CAN pins output on the MPP-C panel processor card */
+                        AM33XX_IOPAD(0x828, PIN_OUTPUT_PULLUP | MUX_MODE7) /* (T11) gpmc_ad10.gpio0[26] - AE pulling BDS mode pin up to enable CAN pins output on the MPP-C panel processor card */
 		>;
 	};
 };
