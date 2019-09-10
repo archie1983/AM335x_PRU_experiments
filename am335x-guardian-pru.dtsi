@@ -30,9 +30,6 @@
 	};
 };
 
-                       /* AM33XX_IOPAD(0x978, PIN_INPUT | MUX_MODE0) */ /* (D18) uart1_ctsn.uart1_ctsn */
-                       /* AM33XX_IOPAD(0x97c, PIN_OUTPUT | MUX_MODE0) */ /* (D17) uart1_rtsn.uart1_rtsn */
-
 &pruss {
         pinctrl-names = "default";
 	pinctrl-0 = <&pru_cape_bone_pins>;
