@@ -10,8 +10,6 @@
 #include "include/ae_dcan.h"
 #include "include/PRU_experiment.h"
 
-volatile register uint32_t __R31;
-
 /* NOTE:  Allocating shared_freq_x to PRU Shared Memory means that other PRU cores on
  *        the same subsystem must take care not to allocate data to that memory.
  *		  Users also cannot rely on where in shared memory these variables are placed
@@ -110,15 +108,4 @@ int main(void)
 
 	/* Halt PRU core */
 	//__halt();
-}
-
-/**
- * When we 'poke' the PRU1 processor once, it will start flashing the LEDs on the Phytec board much
- * faster and it will look like they're glowing continuously. When we 'poke' it again, the LEDs
- * flashing frequency will get back to normal flashing state, that is discernible with a naked eye.
- * 'Poking' it again will repeat it again.
- */
-void pokePRU1Processor() {
-	PRU0_PRU1_TRIGGER;
-	__delay_cycles(100000000); //# 500ms wait
 }
