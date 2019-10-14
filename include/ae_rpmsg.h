@@ -23,4 +23,5 @@
  * Found at linux-x.y.z/include/uapi/linux/virtio_config.h
  */
 #define VIRTIO_CONFIG_S_DRIVER_OK 4
-uint8_t payload[RPMSG_MESSAGE_SIZE];
+
+void commsWithARMCore();

@@ -31,13 +31,16 @@ PRU0_FW		=$(GEN_DIR)/$(PRU0_PROJ).out
 PRU1_FW         =$(GEN_DIR)/$(PRU1_PROJ).out
 
 # AE extra modules
-DCAN = $(GEN_DIR)/ae_dcan
+AE_DCAN = $(GEN_DIR)/ae_dcan
+AE_RPMSG = ae_rpmsg
 
 # -----------------------------------------------------
 # Variable to edit in the makefile
-
+#
 # add the required firmwares to TARGETS
-TARGETS		= $(DCAN) $(PRU0_FW) $(PRU1_FW) $(GEN_DIR)/decay95.out
+# AE: Pay attention how AE extra modules need to come in first, so that when we get to compile and link PRU0_FW,
+# AE: we already have the extra modules available.
+TARGETS		= $(AE_DCAN) $(PRU0_FW) $(PRU1_FW) $(GEN_DIR)/decay95.out
 
 #------------------------------------------------------
 
@@ -56,7 +59,7 @@ $(GEN_DIR)/decay95.obj: $(PRU1_PROJ).c
 
 # AE: Adding an entry for dcan functionality. It's actually gen/dcan so that it puts the .o file into the gen directory.
 # AE: via the $@.o part in the command arguments.
-$(DCAN): ae_dcan.c
+$(AE_DCAN): ae_dcan.c
 	@mkdir -p $(GEN_DIR)
 	@echo 'CC    $@   $<'
 	@clpru --define=DECAY_RATE=95 --include_path=$(PRU_CGT)/include $(INCLUDE) $(CFLAGS) -fe $@.o $<
@@ -64,16 +67,19 @@ $(DCAN): ae_dcan.c
 # AE: Adding the object files of AE extra modules (e.g.: $(GEN_DIR)/ae_dcan.o) to be linked in.
 $(PRU0_FW): $(GEN_DIR)/$(PRU0_PROJ).obj
 	@echo 'LD	$^' 
-	@lnkpru -i$(PRU_CGT)/lib -i$(PRU_CGT)/include $(LFLAGS) -o $@ $^ $(DCAN).o $(LINKER_COMMAND_FILE) --library=libc.a $(LIBS) $^
+	@lnkpru -i$(PRU_CGT)/lib -i$(PRU_CGT)/include $(LFLAGS) -o $@ $^ $(AE_DCAN).o $(LINKER_COMMAND_FILE) --library=libc.a $(LIBS) $^
 
 $(PRU1_FW): $(GEN_DIR)/$(PRU1_PROJ).obj
 	@echo 'LD       $^'
 	@lnkpru -i$(PRU_CGT)/lib -i$(PRU_CGT)/include $(LFLAGS) -o $@ $^  $(LINKER_COMMAND_FILE) --library=libc.a $(LIBS) $^
 
+# AE: ae_rpmsg module (source here is referenced as $(AE_RPMSG).c) has to be compiled together with the main
+# AE: firmware module because they both need the resource table (and other resources) and if we compile them
+# AE: separately, then linking later fails with a resource redefinition error.
 $(GEN_DIR)/$(PRU0_PROJ).obj: $(PRU0_PROJ).c 
 	@mkdir -p $(GEN_DIR)
 	@echo 'CC	$<'
-	@clpru --include_path=$(PRU_CGT)/include $(INCLUDE) $(CFLAGS) -fe $@ $<
+	@clpru --include_path=$(PRU_CGT)/include $(INCLUDE) $(CFLAGS) -fe $@ $< $(AE_RPMSG).c
 
 $(GEN_DIR)/$(PRU1_PROJ).obj: $(PRU1_PROJ).c
 	@mkdir -p $(GEN_DIR)
@@ -104,4 +110,4 @@ run95:
 # Need to make sure that AE extra modules (e.g. ae_dcan) are taken care of and their asm files get deleted
 clean:
 	@echo 'CLEAN	.'
-	@rm -rf $(GEN_DIR) $(PRU0_PROJ).asm $(PRU1_PROJ).asm ae_dcan.asm
+	@rm -rf $(GEN_DIR) $(PRU0_PROJ).asm $(PRU1_PROJ).asm ae_dcan.asm ae_rpmsg.asm
