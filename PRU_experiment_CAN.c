@@ -149,6 +149,8 @@ int main(void)
 {
 	volatile uint8_t *ptr_cm;
 
+    __delay_cycles(1000000000); //# 500ms wait
+
 	/**
 	 * Infrastructure for communication to PRU1
 	 */
@@ -223,7 +225,7 @@ int main(void)
 		//__delay_cycles(100000000); //# 500ms wait
 
 		transmitDataFrame();
-		transmitRemoteFrame();
+		//transmitRemoteFrame();
 
 		//pokePRU1Processor();
 
@@ -362,7 +364,9 @@ void setUpCANTimings() {
 	 * DCAN0_TEST[3] = Silent = 0 : Not in silent mode
 	 * DCAN0_TEST[2:0] : Reserved
 	 */
-	DCAN0_TEST = 0x10;
+    //DCAN0_TEST = 0x100; //# External loopback mode
+	//DCAN0_TEST = 0x10; //# Loopback mode
+    DCAN0_TEST = 0x0; //# Normal operation mode
 	//DCAN0_TEST = 0x210;
 	
 	/**
