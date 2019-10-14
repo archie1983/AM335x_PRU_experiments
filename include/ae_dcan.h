@@ -2,9 +2,6 @@
  * Declarations for CAN functionality
  */
 
-/* Mapping Constant Table (CT) registers to variables. DCAN0 = 0x481CC000 */
-volatile far uint8_t CT_DCAN0 __attribute__((cregister("DCAN0", near), peripheral));
-
 #ifndef PRU_SRAM
 #define PRU_SRAM __far __attribute__((cregister("PRU_SHAREDMEM", near)))
 #endif

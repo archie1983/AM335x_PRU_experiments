@@ -34,7 +34,7 @@ PRU1_FW         =$(GEN_DIR)/$(PRU1_PROJ).out
 # Variable to edit in the makefile
 
 # add the required firmwares to TARGETS
-TARGETS		=$(PRU0_FW) $(PRU1_FW) $(GEN_DIR)/decay95.out
+TARGETS		= $(GEN_DIR)/ae_dcan $(PRU0_FW) $(PRU1_FW) $(GEN_DIR)/decay95.out
 
 #------------------------------------------------------
 
@@ -51,9 +51,17 @@ $(GEN_DIR)/decay95.obj: $(PRU1_PROJ).c
 	@echo 'CC	$<'
 	@clpru --define=DECAY_RATE=95 --include_path=$(PRU_CGT)/include $(INCLUDE) $(CFLAGS) -fe $@ $<
 
+# AE: Adding an entry for dcan functionality. It's actually gen/dcan so that it puts the .o file into the gen directory.
+# AE: via the $@.o part in the command arguments.
+$(GEN_DIR)/ae_dcan: ae_dcan.c
+	@mkdir -p $(GEN_DIR)
+	@echo 'CC    $@   $<'
+	@clpru --define=DECAY_RATE=95 --include_path=$(PRU_CGT)/include $(INCLUDE) $(CFLAGS) -fe $@.o $<
+
+# AE: Adding the object files of AE extra modules (e.g.: $(GEN_DIR)/ae_dcan.o) to be linked in.
 $(PRU0_FW): $(GEN_DIR)/$(PRU0_PROJ).obj
 	@echo 'LD	$^' 
-	@lnkpru -i$(PRU_CGT)/lib -i$(PRU_CGT)/include $(LFLAGS) -o $@ $^  $(LINKER_COMMAND_FILE) --library=libc.a $(LIBS) $^
+	@lnkpru -i$(PRU_CGT)/lib -i$(PRU_CGT)/include $(LFLAGS) -o $@ $^ $(GEN_DIR)/ae_dcan.o $(LINKER_COMMAND_FILE) --library=libc.a $(LIBS) $^
 
 $(PRU1_FW): $(GEN_DIR)/$(PRU1_PROJ).obj
 	@echo 'LD       $^'
@@ -90,6 +98,7 @@ run95:
 	@echo "-	pru core 0 is now loaded with $(GEN_DIR)/decay95.out"
 
 .PHONY: clean
+# Need to make sure that AE extra modules (e.g. ae_dcan) are taken care of and their asm files get deleted
 clean:
 	@echo 'CLEAN	.'
-	@rm -rf $(GEN_DIR) $(PRU0_PROJ).asm $(PRU1_PROJ).asm
+	@rm -rf $(GEN_DIR) $(PRU0_PROJ).asm $(PRU1_PROJ).asm ae_dcan.asm
