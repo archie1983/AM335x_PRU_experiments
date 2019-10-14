@@ -30,11 +30,14 @@ GEN_DIR=gen
 PRU0_FW		=$(GEN_DIR)/$(PRU0_PROJ).out
 PRU1_FW         =$(GEN_DIR)/$(PRU1_PROJ).out
 
+# AE extra modules
+DCAN = $(GEN_DIR)/ae_dcan
+
 # -----------------------------------------------------
 # Variable to edit in the makefile
 
 # add the required firmwares to TARGETS
-TARGETS		= $(GEN_DIR)/ae_dcan $(PRU0_FW) $(PRU1_FW) $(GEN_DIR)/decay95.out
+TARGETS		= $(DCAN) $(PRU0_FW) $(PRU1_FW) $(GEN_DIR)/decay95.out
 
 #------------------------------------------------------
 
@@ -53,7 +56,7 @@ $(GEN_DIR)/decay95.obj: $(PRU1_PROJ).c
 
 # AE: Adding an entry for dcan functionality. It's actually gen/dcan so that it puts the .o file into the gen directory.
 # AE: via the $@.o part in the command arguments.
-$(GEN_DIR)/ae_dcan: ae_dcan.c
+$(DCAN): ae_dcan.c
 	@mkdir -p $(GEN_DIR)
 	@echo 'CC    $@   $<'
 	@clpru --define=DECAY_RATE=95 --include_path=$(PRU_CGT)/include $(INCLUDE) $(CFLAGS) -fe $@.o $<
@@ -61,7 +64,7 @@ $(GEN_DIR)/ae_dcan: ae_dcan.c
 # AE: Adding the object files of AE extra modules (e.g.: $(GEN_DIR)/ae_dcan.o) to be linked in.
 $(PRU0_FW): $(GEN_DIR)/$(PRU0_PROJ).obj
 	@echo 'LD	$^' 
-	@lnkpru -i$(PRU_CGT)/lib -i$(PRU_CGT)/include $(LFLAGS) -o $@ $^ $(GEN_DIR)/ae_dcan.o $(LINKER_COMMAND_FILE) --library=libc.a $(LIBS) $^
+	@lnkpru -i$(PRU_CGT)/lib -i$(PRU_CGT)/include $(LFLAGS) -o $@ $^ $(DCAN).o $(LINKER_COMMAND_FILE) --library=libc.a $(LIBS) $^
 
 $(PRU1_FW): $(GEN_DIR)/$(PRU1_PROJ).obj
 	@echo 'LD       $^'
