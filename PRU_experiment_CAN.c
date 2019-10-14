@@ -1,8 +1,47 @@
 #include <stdint.h>
+#include <stdio.h>
 #include <pru_cfg.h>
 #include <pru_ctrl.h>
 #include <pru_intc.h>
-#include "resource_table_empty.h"
+#include <rsc_types.h>
+#include <pru_rpmsg.h>
+#include "resource_table_rpmsg.h"
+
+volatile register uint32_t __R31;
+
+/*
+ * Declarations for RPMSG
+ */
+ 
+/* Host-0 Interrupt sets bit 30 in register R31 */
+#define HOST_INT                        ((uint32_t) 1 << 30)
+
+/* The PRU-ICSS system events used for RPMsg are defined in the Linux device tree
+ * PRU0 uses system event 16 (To ARM) and 17 (From ARM)
+ * PRU1 uses system event 18 (To ARM) and 19 (From ARM)
+ */
+#define TO_ARM_HOST                     16
+#define FROM_ARM_HOST                   17
+
+/*
+ * Using the name 'rpmsg-pru' will probe the rpmsg_pru driver found
+ * at linux-x.y.z/drivers/rpmsg/rpmsg_pru.c
+ */
+#define CHAN_NAME                       "rpmsg-pru"
+#define CHAN_DESC                       "Channel 30"
+#define CHAN_PORT                       30
+
+/*
+ * Used to make sure the Linux drivers are ready for RPMsg communication
+ * Found at linux-x.y.z/include/uapi/linux/virtio_config.h
+ */
+#define VIRTIO_CONFIG_S_DRIVER_OK       4
+
+uint8_t payload[RPMSG_MESSAGE_SIZE];
+
+/*
+ * Declarations for poking the other PRU core
+ */
 
 /**
  * Defines for communication with the other PRU core (PRU1)
@@ -17,6 +56,10 @@
 #define PRU0_PRU1_TRIGGER	(__R31 = (PRU0_PRU1_EVT - 16) | (1 << 5))
 #define LONG_CYCLE      (5000000)
 #define SHORT_CYCLE     (500000)
+
+/*
+ * Declarations for CAN functionality
+ */
 
 /* Mapping Constant Table (CT) registers to variables. DCAN0 = 0x481CC000 */
 volatile far uint8_t CT_DCAN0 __attribute__((cregister("DCAN0", near), peripheral));
@@ -130,12 +173,6 @@ PRU_SRAM volatile uint32_t shared_freq_3;
 #define IF3DATA (*((volatile uint32_t*)(&CT_DCAN0 + 0x150)))
 #define IF3DATB (*((volatile uint32_t*)(&CT_DCAN0 + 0x154)))
 
-/* This is a char so that I can force access to R31.b0 for the host interrupt */
-volatile register uint8_t __R31;
-
-/* PRU-to-ARM interrupt */
-#define PRU_ARM_INTERRUPT (19+16)
-
 void setUpCANTimings(void);
 void configureCANObjects(void);
 void configIntc(void);
@@ -152,7 +189,7 @@ int main(void)
     __delay_cycles(1000000000); //# 500ms wait
 
 	/**
-	 * Infrastructure for communication to PRU1
+	 * Infrastructure for communication to from PRU0 to PRU1
 	 */
 	/* Configure GPI and GPO as Mode 0 (Direct Connect) */
 	CT_CFG.GPCFG0 = 0x0000;
@@ -732,4 +769,38 @@ void configIntc(void)
 
 	// Globally enable host interrupts
 	CT_INTC.GER = 1;
+}
+
+void commsWithARMCore() {
+    struct pru_rpmsg_transport transport;
+    uint16_t src, dst, len;
+    volatile uint8_t *status;
+
+    /* Allow OCP master port access by the PRU so the PRU can read external memories */
+    CT_CFG.SYSCFG_bit.STANDBY_INIT = 0;
+
+    /* Clear the status of the PRU-ICSS system event that the ARM will use to 'kick' us */
+    CT_INTC.SICR_bit.STS_CLR_IDX = FROM_ARM_HOST;
+
+    /* Make sure the Linux drivers are ready for RPMsg communication */
+    status = &resourceTable.rpmsg_vdev.status;
+    while (!(*status & VIRTIO_CONFIG_S_DRIVER_OK));
+
+    /* Initialize the RPMsg transport structure */
+    pru_rpmsg_init(&transport, &resourceTable.rpmsg_vring0, &resourceTable.rpmsg_vring1, TO_ARM_HOST, FROM_ARM_HOST);
+
+    /* Create the RPMsg channel between the PRU and ARM user space using the transport structure. */
+    while (pru_rpmsg_channel(RPMSG_NS_CREATE, &transport, CHAN_NAME, CHAN_DESC, CHAN_PORT) != PRU_RPMSG_SUCCESS);
+    while (1) {
+            /* Check bit 30 of register R31 to see if the ARM has kicked us */
+            if (__R31 & HOST_INT) {
+                    /* Clear the event status */
+                    CT_INTC.SICR_bit.STS_CLR_IDX = FROM_ARM_HOST;
+                    /* Receive all available messages, multiple messages can be sent per kick */
+                    while (pru_rpmsg_receive(&transport, &src, &dst, payload, &len) == PRU_RPMSG_SUCCESS) {
+                            /* Echo the message back to the same address from which we just received */
+                            pru_rpmsg_send(&transport, dst, src, payload, len);
+                    }
+            }
+    }
 }
