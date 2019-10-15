@@ -1,9 +1,13 @@
 /*
- * Declarations for poking the other PRU core
- */ /**
- * Defines for communication with the other PRU core (PRU1)
+ * Declarations for poking the other PRU core (PRU1)
+ *
+ * We need to map some event to go to PRU1. We don't want to use events 16, 17, 18, 19 because they
+ * are used by RPMSG and the numbers are defined in the device tree, so unless we recompile the device 
+ * tree, it's best to leave them alone.
+ * 
+ * So we're going to choose something that is free- perhaps 20 seems like a nice number.
  */
-#define PRU0_PRU1_EVT (16)
+#define PRU0_PRU1_EVT (20)
 /**
  * PRU can trigger events 16-31 which map to 0-15 in R31[4:0] register.
  * The bit1 in 6th position (0x100000) is the ISR bit (the bit that raises the particular event)

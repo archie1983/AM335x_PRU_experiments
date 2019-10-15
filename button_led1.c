@@ -42,7 +42,7 @@ volatile register uint32_t __R31;
 /* Defines */
 #define PRU1
 #define HOST1_MASK		(0x80000000)
-#define PRU0_PRU1_EVT	(16)
+#define PRU0_PRU1_EVT	(20)
 #define TOGGLE_BLUE (__R30 ^= (1 << 3))
 #define TOGGLE_FOUR (__R30 ^= (1 << 4))
 #define TOGGLE_FIVE (__R30 ^= (1 << 5))
@@ -71,7 +71,7 @@ void main(void)
 				delay_time = 0;
 			}
 			/* Clear interrupt event */
-			CT_INTC.SICR = 16;
+			CT_INTC.SICR = PRU0_PRU1_EVT;
 			/* Delay to ensure the event is cleared in INTC */
 			__delay_cycles(5);
 		}

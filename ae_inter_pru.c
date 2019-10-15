@@ -54,34 +54,39 @@ void setUpInterPRU() {
     configIntc();
 }
 
-/* INTC configuration
- * We are going to map User event 16 to Host 1
+/* 
+ * INTC configuration
+ * We need to map some event to go to PRU1. We don't want to use events 16, 17, 18, 19 because they
+ * are used by RPMSG and the numbers are defined in the device tree, so unless we recompile the devicetree,
+ * it's best to leave them alone.
+ *
+ * We are going to map User event PRU0_PRU1_EVT, which was 20 at the time of writing to Host 1
  * PRU1 will then wait for r31 bit 31 (designates Host 1) to go high
- * */
+ */
 void configIntc()
 {
 	/* Clear any pending PRU-generated events */
 	__R31 = 0x00000000;
 
-	/* Map event 16 to channel 1
+	/* Map event 20 to channel 1
 	 *
-	 * ??? We are setting up the event 16 to be routed to channel 1 (which goes to PRU1 as a PRU host interrupt)
-	 * */
-	CT_INTC.CMR4_bit.CH_MAP_16 = 1;
+	 * We are setting up the event 20 to be routed to channel 1 (which goes to PRU1 as a PRU host interrupt)
+     */
+	CT_INTC.CMR5_bit.CH_MAP_20 = 1;
 
 	/* Map channel 1 to host 1
 	 *
-	 * ??? We are setting up the channel 1 to be routed to host1 (which is PRU1)
+	 * We are setting up Host interrupt map so that channel 1 is routed to host1 (which is PRU1)
 	 * */
 	CT_INTC.HMR0_bit.HINT_MAP_1 = 1;
 
-	/* Ensure event 16 is cleared */
-	CT_INTC.SICR = 16;
+	/* Ensure event 20 is cleared */
+	CT_INTC.SICR = PRU0_PRU1_EVT;
 	/* Delay to ensure the event is cleared in INTC */
 	__delay_cycles(5);
 
-	/* Enable event 16 */
-	CT_INTC.EISR = 16;
+	/* Enable event 20 */
+	CT_INTC.EISR = PRU0_PRU1_EVT;
 
 	/* Enable Host interrupt 1 */
 	CT_INTC.HIEISR |= (1 << 0);

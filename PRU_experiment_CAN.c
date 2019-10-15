@@ -41,7 +41,7 @@ int main(void)
 
 		//__delay_cycles(100000000); //# 500ms wait
 
-		//transmitDataFrame();
+		transmitDataFrame();
 		//transmitRemoteFrame();
 
 		//pokePRU1Processor();
