@@ -1,7 +1,7 @@
 #include "include/ae_rpmsg.h"
 #include "include/ae_inter_pru.h"
 #include "include/ae_dcan.h"
-#include "include/PRU_experiment.h"
+//#include "include/PRU_experiment.h"
 
 int main(void)
 {
@@ -31,6 +31,8 @@ int main(void)
 	 * Now the second part: Configuration of message objects.
 	 */
 	configureCANObjects();
+
+    commsWithARMCore();
 
 	pokePRU1Processor(); //# so that I can see that it has gone through initialisation
 

@@ -4,5 +4,6 @@
  */
 #ifndef _PRU_experiment_H_
 #define _PRU_experiment_H_
+//#warning "INCLUDING PRU_EXPERIMENT"
 #include "resource_table_rpmsg.h"
 #endif /* _PRU_experiment_H_ */

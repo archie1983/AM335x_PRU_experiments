@@ -75,7 +75,7 @@ $(AE_INTER_PRU): ae_inter_pru.c
 # AE: Adding the object files of AE extra modules (e.g.: $(GEN_DIR)/ae_dcan.o) to be linked in.
 $(PRU0_FW): $(GEN_DIR)/$(PRU0_PROJ).obj
 	@echo 'LD	$^' 
-	@lnkpru -i$(PRU_CGT)/lib -i$(PRU_CGT)/include $(LFLAGS) -o $@ $^ $(AE_DCAN).o $(AE_INTER_PRU).o $(LINKER_COMMAND_FILE) --library=libc.a $(LIBS) $^
+	@lnkpru -i$(PRU_CGT)/lib -i$(PRU_CGT)/include $(LFLAGS) -o $@ $^ $(AE_DCAN).o $(AE_INTER_PRU).o $(GEN_DIR)/$(AE_RPMSG).obj $(LINKER_COMMAND_FILE) --library=libc.a $(LIBS) $^
 
 $(PRU1_FW): $(GEN_DIR)/$(PRU1_PROJ).obj
 	@echo 'LD       $^'
