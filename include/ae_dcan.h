@@ -102,9 +102,9 @@
 #define IF3DATA (*((volatile uint32_t*)(&CT_DCAN0 + 0x150)))
 #define IF3DATB (*((volatile uint32_t*)(&CT_DCAN0 + 0x154)))
 
+void startDCANClock(void);
 void setUpCANTimings(void);
 void configureCANObjects(void);
-void configIntc(void);
 void pokePRU1Processor(void);
 void transmitDataFrame(void);
 void transmitRemoteFrame(void);

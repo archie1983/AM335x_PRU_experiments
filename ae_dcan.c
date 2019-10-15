@@ -1,11 +1,21 @@
 #include <stdint.h>
-#include <pru_intc.h>
 #include "include/ae_dcan.h"
 
 volatile register uint32_t __R31;
 
 /* Mapping Constant Table (CT) registers to variables. DCAN0 = 0x481CC000 */
 volatile far uint8_t CT_DCAN0 __attribute__((cregister("DCAN0", near), peripheral));
+
+void startDCANClock() {
+    volatile uint8_t *ptr_cm;
+    /*****************************************************************/
+	/* Access SoC peripherals using Constant Table                   */
+	/*****************************************************************/
+
+    ptr_cm = CM_PER_BASE;
+	/* Access PRCM (without CT) to initialize DCAN0 clock */
+    ptr_cm[CM_PER_DCAN0_CLKCTRL] = ON;
+}
 
 void transmitDataFrame() {
 	uint32_t tmp_val;
@@ -106,7 +116,8 @@ void setUpCANTimings() {
 	//DCAN0_CTL = 0x41;
 	//DCAN0_CTL = 0xC1; //# with test mode
 	//DCAN0_CTL = 0x1C16E1; //# with test mode enabled and parity mode disabled and auto retransmission disabled
-	DCAN0_CTL = 0x16E1; //# with test mode enabled and parity mode disabled and auto retransmission disabled
+	//DCAN0_CTL = 0x16E1; //# with test mode enabled and parity mode disabled and auto retransmission disabled
+    DCAN0_CTL = 0x1661; //# with test mode disabled and parity mode disabled and auto retransmission disabled
 
 	/**
 	 * waiting for init bit to be set
@@ -456,40 +467,4 @@ void init_dcan_ram() {
 	ptr_cm = CONTROL_MODULE;
 	ptr_cm[CTRL_MOD_DCAN_RAMINIT_offset] = 0x1;
 	while ((ptr_cm[CTRL_MOD_DCAN_RAMINIT_offset] & 0x100) == 0x0);
-}
-
-/* INTC configuration
- * We are going to map User event 16 to Host 1
- * PRU1 will then wait for r31 bit 31 (designates Host 1) to go high
- * */
-void configIntc(void)
-{
-	/* Clear any pending PRU-generated events */
-	__R31 = 0x00000000;
-
-	/* Map event 16 to channel 1
-	 *
-	 * ??? We are setting up the event 16 to be routed to channel 1 (which goes to PRU1 as a PRU host interrupt)
-	 * */
-	CT_INTC.CMR4_bit.CH_MAP_16 = 1;
-
-	/* Map channel 1 to host 1
-	 *
-	 * ??? We are setting up the channel 1 to be routed to host1 (which is PRU1)
-	 * */
-	CT_INTC.HMR0_bit.HINT_MAP_1 = 1;
-
-	/* Ensure event 16 is cleared */
-	CT_INTC.SICR = 16;
-	/* Delay to ensure the event is cleared in INTC */
-	__delay_cycles(5);
-
-	/* Enable event 16 */
-	CT_INTC.EISR = 16;
-
-	/* Enable Host interrupt 1 */
-	CT_INTC.HIEISR |= (1 << 0);
-
-	// Globally enable host interrupts
-	CT_INTC.GER = 1;
 }

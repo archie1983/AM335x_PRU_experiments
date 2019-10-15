@@ -14,10 +14,16 @@
 #define LONG_CYCLE (5000000)
 #define SHORT_CYCLE     (500000)
 
+#ifndef PRU_SRAM
+#define PRU_SRAM __far __attribute__((cregister("PRU_SHAREDMEM", near)))
+#endif
+
 /**
  * When we 'poke' the PRU1 processor once, it will start flashing the LEDs on the Phytec board much
  * faster and it will look like they're glowing continuously. When we 'poke' it again, the LEDs
  * flashing frequency will get back to normal flashing state, that is discernible with a naked eye.
  * 'Poking' it again will repeat it again.
  */
-void pokePRU1Processor();
+void pokePRU1Processor(void);
+void setUpInterPRU(void);
+void configIntc(void);
