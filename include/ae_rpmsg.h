@@ -1,3 +1,4 @@
+#include <stdint.h>
 /*
  * Declarations for RPMSG
  */
@@ -26,3 +27,5 @@
 
 void setUpCommsWithARMCore();
 void serveCommsWithARMCore();
+uint8_t * getLastReceivedMessage();
+void sendMessageToUserSpace(uint8_t*, uint16_t);

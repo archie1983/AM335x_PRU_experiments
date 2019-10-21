@@ -8,6 +8,9 @@
 
 volatile register uint32_t __R31;
 uint8_t payload[RPMSG_MESSAGE_SIZE];
+uint8_t lastReceivedMessage[RPMSG_MESSAGE_SIZE];
+uint16_t lastMessageLength;
+uint16_t lastMessageSrc, lastMessageDest;
 
 /*
  * A global transport structure -- we'll set it up in setUpCommsWithARMCore() and use it
@@ -42,18 +45,27 @@ void setUpCommsWithARMCore() {
  * Serves the comms between PRU and ARM cores -- if we have an interrupt pending for incoming message, then
  * reads the incoming message and sends out the response.
  */
-
 void serveCommsWithARMCore() {
-    uint16_t src, dst, len;
-    
     /* Check bit 30 of register R31 to see if the ARM has kicked us */
     if (__R31 & HOST_INT) {
             /* Clear the event status */
             CT_INTC.SICR_bit.STS_CLR_IDX = FROM_ARM_HOST;
-            /* Receive all available messages, multiple messages can be sent per kick */
-            while (pru_rpmsg_receive(&transport, &src, &dst, payload, &len) == PRU_RPMSG_SUCCESS) {
-                    /* Echo the message back to the same address from which we just received */
-                    pru_rpmsg_send(&transport, dst, src, payload, len);
-            }
+            /* Receive all available messages, multiple messages can be sent per kick and store the last one into lastReceivedMessage. */
+            while (pru_rpmsg_receive(&transport, &lastMessageSrc, &lastMessageDest, lastReceivedMessage, &lastMessageLength) == PRU_RPMSG_SUCCESS);
     }
+}
+
+/**
+ * Returns last received message (a pointer to it actually) from Linux user space running on ARM core.
+ */
+uint8_t * getLastReceivedMessage() {
+    return lastReceivedMessage;
+}
+
+/**
+ * Sends out a message to the user space in Linux running on the ARM core.
+ */
+void sendMessageToUserSpace(uint8_t * message, uint16_t messageLength) {
+    /* Send the message to the address, that we last received something from. */
+    pru_rpmsg_send(&transport, lastMessageDest, lastMessageSrc, message, messageLength);
 }

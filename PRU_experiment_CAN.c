@@ -2,6 +2,9 @@
 #include "include/ae_inter_pru.h"
 #include "include/ae_dcan.h"
 //#include "include/PRU_experiment.h"
+#include <string.h>
+
+uint8_t * lastReceivedMessageFromUser;
 
 int main(void)
 {
@@ -44,6 +47,18 @@ int main(void)
 		//__delay_cycles(100000000); //# 500ms wait
 
         serveCommsWithARMCore();
+        
+        /*
+         * If last received message matches a predefined command, then executing that
+         * command. Don't forget to clear the lastReceivedMessageFromUser, otherwise
+         * we'll be re-entering here non-stop.
+         */
+        lastReceivedMessageFromUser = getLastReceivedMessage();
+        if (strncmp (lastReceivedMessageFromUser, "show", 4) == 0) {
+            
+            strncpy(lastReceivedMessageFromUser, "\0\0\0\0", 4);
+            sendMessageToUserSpace("AAA", 3);
+        }
 		//transmitDataFrame();
 		//transmitRemoteFrame();
 
