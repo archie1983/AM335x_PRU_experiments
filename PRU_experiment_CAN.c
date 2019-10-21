@@ -32,7 +32,7 @@ int main(void)
 	 */
 	configureCANObjects();
 
-    commsWithARMCore();
+    setUpCommsWithARMCore();
 
 	pokePRU1Processor(); //# so that I can see that it has gone through initialisation
 
@@ -43,7 +43,8 @@ int main(void)
 
 		//__delay_cycles(100000000); //# 500ms wait
 
-		transmitDataFrame();
+        serveCommsWithARMCore();
+		//transmitDataFrame();
 		//transmitRemoteFrame();
 
 		//pokePRU1Processor();

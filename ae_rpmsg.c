@@ -4,13 +4,21 @@
 #include <pru_cfg.h>
 #include "include/ae_rpmsg.h"
 #include "include/PRU_experiment.h"
+#include "include/ae_inter_pru.h"
 
 volatile register uint32_t __R31;
 uint8_t payload[RPMSG_MESSAGE_SIZE];
 
-void commsWithARMCore() {
-    struct pru_rpmsg_transport transport;
-    uint16_t src, dst, len;
+/*
+ * A global transport structure -- we'll set it up in setUpCommsWithARMCore() and use it
+ * in serveCommsWithARMCore().
+ */
+struct pru_rpmsg_transport transport;
+
+/**
+ * Sets up the communication infrastructure between ARM and PRU core
+ */
+void setUpCommsWithARMCore() {
     volatile uint8_t *status;
 
     /* Allow OCP master port access by the PRU so the PRU can read external memories */
@@ -28,16 +36,24 @@ void commsWithARMCore() {
 
     /* Create the RPMsg channel between the PRU and ARM user space using the transport structure. */
     while (pru_rpmsg_channel(RPMSG_NS_CREATE, &transport, CHAN_NAME, CHAN_DESC, CHAN_PORT) != PRU_RPMSG_SUCCESS);
-    while (1) {
-            /* Check bit 30 of register R31 to see if the ARM has kicked us */
-            if (__R31 & HOST_INT) {
-                    /* Clear the event status */
-                    CT_INTC.SICR_bit.STS_CLR_IDX = FROM_ARM_HOST;
-                    /* Receive all available messages, multiple messages can be sent per kick */
-                    while (pru_rpmsg_receive(&transport, &src, &dst, payload, &len) == PRU_RPMSG_SUCCESS) {
-                            /* Echo the message back to the same address from which we just received */
-                            pru_rpmsg_send(&transport, dst, src, payload, len);
-                    }
+}
+
+/**
+ * Serves the comms between PRU and ARM cores -- if we have an interrupt pending for incoming message, then
+ * reads the incoming message and sends out the response.
+ */
+
+void serveCommsWithARMCore() {
+    uint16_t src, dst, len;
+    
+    /* Check bit 30 of register R31 to see if the ARM has kicked us */
+    if (__R31 & HOST_INT) {
+            /* Clear the event status */
+            CT_INTC.SICR_bit.STS_CLR_IDX = FROM_ARM_HOST;
+            /* Receive all available messages, multiple messages can be sent per kick */
+            while (pru_rpmsg_receive(&transport, &src, &dst, payload, &len) == PRU_RPMSG_SUCCESS) {
+                    /* Echo the message back to the same address from which we just received */
+                    pru_rpmsg_send(&transport, dst, src, payload, len);
             }
     }
 }

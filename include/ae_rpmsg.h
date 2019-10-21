@@ -24,4 +24,5 @@
  */
 #define VIRTIO_CONFIG_S_DRIVER_OK 4
 
-void commsWithARMCore();
+void setUpCommsWithARMCore();
+void serveCommsWithARMCore();
