@@ -39,6 +39,50 @@ void transmitRemoteFrame() {
 	while (IF2CMD & 0x8000 > 0); //# waiting until the IF2 registers are transferred to DCAN RAM, which will start CAN remote frame transmission
 }
 
+/**
+ * Reads a data frame that has been received on the CAN bus and then
+ * transfers the data bits from that frame into the buffer passed as
+ * the argument. The buffer needs to be at least 8 chars long.
+ */
+void readReceivedDataFrame(uint8_t * receivedData) {
+
+    uint8_t result[8]; // we have 8 bytes of data arriving in combined IF2DATA and IF2DATB registers
+
+    /**
+     * First we'll set the IF2CMD register to transfer received data fro object 2 from RAM
+     * to the IF2DATA and IF2DATB registers.
+	 *
+	 * IF1CMD[31:24] = 0 : Reserved
+	 * IF1CMD[23] = 0 : Direction- read (from IF2 register set to the message object
+	 * addressed by Message Number bits (7:0)
+	 * IF1CMD[22] = 1 : Read Mask bits in the message object
+	 * IF1CMD[21] = 1 : Read Arbitration bits in the message object
+	 * IF1CMD[20] = 1 : Read Access control bits in the message object
+	 * IF1CMD[19] = 1 : Reset IntPnd - clear "interrupt pending" bit
+	 * IF1CMD[18] = 1 : Clear NewDat bit in the message object
+	 * IF1CMD[17] = 1 : Read Data bits[3:0] in the message object
+	 * IF1CMD[16] = 1 : Read Data bits[7:4] in the message object
+	 * IF1CMD[15] = 0 : Clear the "busy" bit of this register (probably should be r/o anyway)
+	 * IF1CMD[14] = 0 : Not going to use DMA yet
+	 * IF1CMD[13:8] = 0 : Reserved
+	 * IF1CMD[7:0] = 2 : This will be message #2
+	 */
+	IF2CMD = 0x7F0001;
+
+	/**
+	 * Just in case the IF registers are still transferring data from the DCAN RAM,
+	 * we need to wait a little before reading the received data in IF2DATA and IF2DATB
+     * registers.
+	 */
+	 while ((IF2CMD & 0x8000) == 0x8000);
+     
+     /**
+      * Now read IF2DATA and IF2DATB and return the 8 bytes that we have in there.
+      */
+     receivedData[0] = IF2DATA;
+     receivedData[4] = IF2DATB;
+}
+
 void setUpCANTimings() {
 	uint32_t tmp_val;
 
@@ -67,7 +111,7 @@ void setUpCANTimings() {
 	 * DCAN0_CTL[13:10] = PMD = 0 : Parity on atm (anything other than 5 here switches parity on), but will probably disable later
 	 * DCAN0_CTL[9] = ABO = 0 : Auto-Bus-On feature (to automatically try to recover from errors): Off for now, but will set it later
 	 * DCAN0_CTL[8] = IDS = 0 : Not to enter debug mode immediately, but to wait for frame completion (only if debug/suspend mode is requested)
-	 * DCAN0_CTL[7] = TEST = 0 : Test mode (off for now, but will set it later)
+	 * DCAN0_CTL[7] = TEST = 0 : Test mode (off for now, but may set it later)
 	 * DCAN0_CTL[6] = CCE = 0 : Configuration changes (disabled for now, but will enable later)
 	 * DCAN0_CTL[5] = DAR = 0 : Auto retransmission of unsuccessful messages (off for now, but will enable later)
 	 * DCAN0_CTL[4] : Reserved
@@ -116,8 +160,8 @@ void setUpCANTimings() {
 	//DCAN0_CTL = 0x41;
 	//DCAN0_CTL = 0xC1; //# with test mode
 	//DCAN0_CTL = 0x1C16E1; //# with test mode enabled and parity mode disabled and auto retransmission disabled
-	//DCAN0_CTL = 0x16E1; //# with test mode enabled and parity mode disabled and auto retransmission disabled
-    DCAN0_CTL = 0x1661; //# with test mode disabled and parity mode disabled and auto retransmission disabled
+	DCAN0_CTL = 0x16E1; //# with test mode enabled and parity mode disabled and auto retransmission disabled
+    //DCAN0_CTL = 0x1661; //# with test mode disabled and parity mode disabled and auto retransmission disabled
 
 	/**
 	 * waiting for init bit to be set
@@ -137,8 +181,9 @@ void setUpCANTimings() {
 	 */
     //DCAN0_TEST = 0x100; //# External loopback mode
 	//DCAN0_TEST = 0x10; //# Loopback mode
-    DCAN0_TEST = 0x0; //# Normal operation mode
-	//DCAN0_TEST = 0x210;
+    //DCAN0_TEST = 0x210; //# Loopback mode with RAM access
+    //DCAN0_TEST = 0x0; //# Normal operation mode
+    DCAN0_TEST = 0x200; //# Normal operation mode with RAM access
 	
 	/**
 	 * Now the actual bit timing register value:

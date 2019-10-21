@@ -5,6 +5,7 @@
 #include <string.h>
 
 uint8_t * lastReceivedMessageFromUser;
+uint8_t lastReceivedDataFromCANBus[8];
 
 int main(void)
 {
@@ -55,9 +56,9 @@ int main(void)
          */
         lastReceivedMessageFromUser = getLastReceivedMessage();
         if (strncmp (lastReceivedMessageFromUser, "show", 4) == 0) {
-            
             strncpy(lastReceivedMessageFromUser, "\0\0\0\0", 4);
-            sendMessageToUserSpace("AAA", 3);
+            readReceivedDataFrame(lastReceivedDataFromCANBus);
+            sendMessageToUserSpace(lastReceivedDataFromCANBus, 8);
         }
 		//transmitDataFrame();
 		//transmitRemoteFrame();

@@ -1,6 +1,7 @@
 /*
  * Declarations for CAN functionality
  */
+#include <stdint.h>
 
 #ifndef PRU_SRAM
 #define PRU_SRAM __far __attribute__((cregister("PRU_SHAREDMEM", near)))
@@ -110,3 +111,4 @@ void transmitDataFrame(void);
 void transmitRemoteFrame(void);
 void init_dcan_ram(void);
 void disable_unused_dcan0_objects(void);
+void readReceivedDataFrame(uint8_t *);
