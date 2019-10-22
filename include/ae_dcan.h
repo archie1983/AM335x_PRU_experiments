@@ -112,3 +112,4 @@ void transmitRemoteFrame(void);
 void init_dcan_ram(void);
 void disable_unused_dcan0_objects(void);
 void readReceivedDataFrame(uint8_t *);
+void loadDataToSendInDataFrame(uint8_t *);

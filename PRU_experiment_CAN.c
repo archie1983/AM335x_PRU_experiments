@@ -66,9 +66,11 @@ int main(void)
             strncpy((char *)lastReceivedMessageFromUser, "\0\0\0\0", 4);
             sendMessageToUserSpace("I'm UP", 6);
         } else if (getLastReceivedMessageLength() == 9) {
+            loadDataToSendInDataFrame(lastReceivedMessageFromUser);
+            transmitDataFrame();
+            
             strncpy((char *)lastReceivedMessageFromUser, "\0\0\0\0", 4);
             resetLastReceivedMessageLength();
-            sendMessageToUserSpace("8 long", 6);
         } else {
             //transmitDataFrame();
             //transmitRemoteFrame();

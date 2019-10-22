@@ -22,7 +22,28 @@ void transmitDataFrame() {
 
 	//IF1MCTL = tmp_val | 0x8100; //# Requesting a transmit by setting the TxRqst and NewDat flags
 	tmp_val = IF1CMD; //# 0xF30001
-	IF1CMD = tmp_val | 0x840000; //# Setting IF1CMD[23] = WR_RD = 1 and IF1CMD[18] = TxRqst_NewDat = 1 to start a data frame transmission
+    
+    /*
+     * We need to set up IF1CMD register to write mode, request send by setting TxRqst_NewDat = 1, tell it to re-read
+     * IF1DATA and IF1DATB registers for the data that we want to send and finally set the message object number, that
+     * we are using for sending a data frame. Atm that message object number is 1.
+	 *
+	 * IF1CMD[31:24] = 0 : Reserved
+	 * IF1CMD[23] = 1 : Direction- write (from IF1 register set to the message object in RAM). Message object is specified by Message Number bits (7:0).
+	 * IF1CMD[22] = 0 : Leave as is Mask bits in the message object
+	 * IF1CMD[21] = 0 : Leave as is Arbitration bits in the message object
+	 * IF1CMD[20] = 0 : Leave as is Access control bits in the message object
+	 * IF1CMD[19] = 0 : Leave as is IntPnd - "interrupt pending" bit
+	 * IF1CMD[18] = 1 : Set TxRqst_NewDat bit in the message object to start transfer when message object number is loaded.
+	 * IF1CMD[17] = 1 : Write Data bits[3:0] in the message object from IF1DATA
+	 * IF1CMD[16] = 1 : Write Data bits[7:4] in the message object from IF1DATB
+	 * IF1CMD[15] = 0 : Leave as is the "busy" bit of this register (probably should be r/o anyway)
+	 * IF1CMD[14] = 0 : Not going to use DMA yet
+	 * IF1CMD[13:8] = 0 : Reserved
+	 * IF1CMD[7:0] = 0 : Not specifying message number yet, because transfer will start when we specify it.
+     */
+	IF1CMD = tmp_val | 0x870000;
+    
 	tmp_val = IF1CMD;
 	IF1CMD = tmp_val | 0x1; //# Setting IF1CMD[7:0] = message_number to start data transfer from IF register to RAM, which will
 							//# also set the TxRqst flag and actually start the data frame transmission
@@ -51,8 +72,7 @@ void readReceivedDataFrame(uint8_t * receivedData) {
      * to the IF2DATA and IF2DATB registers.
 	 *
 	 * IF1CMD[31:24] = 0 : Reserved
-	 * IF1CMD[23] = 0 : Direction- read (from IF2 register set to the message object
-	 * addressed by Message Number bits (7:0)
+	 * IF1CMD[23] = 0 : Direction- read (from the message object in RAM to the DCAN registers). Message object is specified by Message Number bits (7:0).
 	 * IF1CMD[22] = 1 : Read Mask bits in the message object
 	 * IF1CMD[21] = 1 : Read Arbitration bits in the message object
 	 * IF1CMD[20] = 1 : Read Access control bits in the message object
@@ -63,7 +83,7 @@ void readReceivedDataFrame(uint8_t * receivedData) {
 	 * IF1CMD[15] = 0 : Clear the "busy" bit of this register (probably should be r/o anyway)
 	 * IF1CMD[14] = 0 : Not going to use DMA yet
 	 * IF1CMD[13:8] = 0 : Reserved
-	 * IF1CMD[7:0] = 2 : This will be message #2
+	 * IF1CMD[7:0] = 1 : This will be message #1
 	 */
 	IF2CMD = 0x7F0001;
 
@@ -78,7 +98,42 @@ void readReceivedDataFrame(uint8_t * receivedData) {
       * Now read IF2DATA and IF2DATB and return the 8 bytes that we have in there.
       */
      receivedData[0] = IF2DATA;
+     receivedData[1] = IF2DATA >> 8;
+     receivedData[2] = IF2DATA >> 16;
+     receivedData[3] = IF2DATA >> 24;
+
      receivedData[4] = IF2DATB;
+     receivedData[5] = IF2DATB >> 8;
+     receivedData[6] = IF2DATB >> 16;
+     receivedData[7] = IF2DATB >> 24;
+}
+
+/**
+ * Loads data buffers (IF1DATA and IF1DATB) with the passed data so that it
+ * can be sent off in a data frame when we next call transmitDataFrame().
+ * 
+ * dataToSend must contain at least 8 bytes of information, but only first 8
+ * bytes will be loaded and sent.
+ */
+void loadDataToSendInDataFrame(uint8_t * dataToSend) {
+     /**
+      * Now load IF2DATA and IF2DATB with the required 8 bytes that we have in the input parameter.
+      */
+     IF1DATA = dataToSend[3];
+     IF1DATA = IF1DATA << 8;
+     IF1DATA |= dataToSend[2];
+     IF1DATA = IF1DATA << 8;
+     IF1DATA |= dataToSend[1];
+     IF1DATA = IF1DATA << 8;
+     IF1DATA |= dataToSend[0];
+
+     IF1DATB = dataToSend[7];
+     IF1DATB = IF1DATB << 8;
+     IF1DATB |= dataToSend[6];
+     IF1DATB = IF1DATB << 8;
+     IF1DATB |= dataToSend[5];
+     IF1DATB = IF1DATB << 8;
+     IF1DATB |= dataToSend[4];
 }
 
 void setUpCANTimings() {
