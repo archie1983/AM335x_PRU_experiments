@@ -42,12 +42,10 @@ void transmitRemoteFrame() {
 /**
  * Reads a data frame that has been received on the CAN bus and then
  * transfers the data bits from that frame into the buffer passed as
- * the argument. The buffer needs to be at least 8 chars long.
+ * the argument. The buffer needs to be at least 8 chars long as we 
+ * have 8 bytes of data arriving in combined IF2DATA and IF2DATB registers.
  */
 void readReceivedDataFrame(uint8_t * receivedData) {
-
-    uint8_t result[8]; // we have 8 bytes of data arriving in combined IF2DATA and IF2DATB registers
-
     /**
      * First we'll set the IF2CMD register to transfer received data fro object 2 from RAM
      * to the IF2DATA and IF2DATB registers.
@@ -160,8 +158,8 @@ void setUpCANTimings() {
 	//DCAN0_CTL = 0x41;
 	//DCAN0_CTL = 0xC1; //# with test mode
 	//DCAN0_CTL = 0x1C16E1; //# with test mode enabled and parity mode disabled and auto retransmission disabled
-	DCAN0_CTL = 0x16E1; //# with test mode enabled and parity mode disabled and auto retransmission disabled
-    //DCAN0_CTL = 0x1661; //# with test mode disabled and parity mode disabled and auto retransmission disabled
+	//DCAN0_CTL = 0x16E1; //# with test mode enabled and parity mode disabled and auto retransmission disabled
+    DCAN0_CTL = 0x1661; //# with test mode disabled and parity mode disabled and auto retransmission disabled
 
 	/**
 	 * waiting for init bit to be set
@@ -182,8 +180,8 @@ void setUpCANTimings() {
     //DCAN0_TEST = 0x100; //# External loopback mode
 	//DCAN0_TEST = 0x10; //# Loopback mode
     //DCAN0_TEST = 0x210; //# Loopback mode with RAM access
-    //DCAN0_TEST = 0x0; //# Normal operation mode
-    DCAN0_TEST = 0x200; //# Normal operation mode with RAM access
+    DCAN0_TEST = 0x0; //# Normal operation mode
+    //DCAN0_TEST = 0x200; //# Normal operation mode with RAM access
 	
 	/**
 	 * Now the actual bit timing register value:
@@ -364,7 +362,7 @@ void configureCANObjects() {
 	 * Similarly we set up the IF2 registers for the "receive" object
 	 */
 	IF2ARB = 0x15C80000; //# ID will be AE4 : 1010 1110 0100
-	IF2MSK = 0x3FE00000; //# We will only accept remote frames from address that contains 0xAE in the beginning
+	IF2MSK = 0x3FE00000; //# We will only accept data frames from address that contains 0xAE in the beginning
 	IF2MCTL = 0x1088; //# RmtEn == 0 because this object will not handle received remote frames
 	IF2DATA = 0x0;
 	IF2DATB = 0x0;

@@ -9,7 +9,7 @@ uint8_t lastReceivedDataFromCANBus[8];
 
 int main(void)
 {
-    __delay_cycles(1000000000); //# 500ms wait
+    __delay_cycles(100000000); //# 500ms wait
 
     /*
      * Setting up inter communication between PRU0 and PRU1
@@ -55,12 +55,25 @@ int main(void)
          * we'll be re-entering here non-stop.
          */
         lastReceivedMessageFromUser = getLastReceivedMessage();
-        if (strncmp (lastReceivedMessageFromUser, "show", 4) == 0) {
-            strncpy(lastReceivedMessageFromUser, "\0\0\0\0", 4);
+        if (strncmp ((char *)lastReceivedMessageFromUser, "show", 4) == 0) {
+            strncpy((char *)lastReceivedMessageFromUser, "\0\0\0\0", 4);
             readReceivedDataFrame(lastReceivedDataFromCANBus);
             sendMessageToUserSpace(lastReceivedDataFromCANBus, 8);
+        } else if(strncmp ((char *)lastReceivedMessageFromUser, "send", 4) == 0) {
+            strncpy((char *)lastReceivedMessageFromUser, "\0\0\0\0", 4);
+            transmitDataFrame();
+        } else if (strncmp ((char *)lastReceivedMessageFromUser, "test", 4) == 0) {
+            strncpy((char *)lastReceivedMessageFromUser, "\0\0\0\0", 4);
+            sendMessageToUserSpace("I'm UP", 6);
+        } else if (getLastReceivedMessageLength() == 9) {
+            strncpy((char *)lastReceivedMessageFromUser, "\0\0\0\0", 4);
+            resetLastReceivedMessageLength();
+            sendMessageToUserSpace("8 long", 6);
+        } else {
+            //transmitDataFrame();
+            //transmitRemoteFrame();
         }
-		//transmitDataFrame();
+
 		//transmitRemoteFrame();
 
 		//pokePRU1Processor();

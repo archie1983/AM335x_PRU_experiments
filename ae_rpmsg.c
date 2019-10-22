@@ -63,6 +63,20 @@ uint8_t * getLastReceivedMessage() {
 }
 
 /**
+ * Returns length (including the \0 symbol) of the last received message from Linux user space running on ARM core.
+ */
+uint16_t getLastReceivedMessageLength() {
+    return lastMessageLength;
+}
+
+/**
+ * Resets length of the last received message from Linux user space running on ARM core.
+ */
+void resetLastReceivedMessageLength() {
+    lastMessageLength = 0;
+}
+
+/**
  * Sends out a message to the user space in Linux running on the ARM core.
  */
 void sendMessageToUserSpace(uint8_t * message, uint16_t messageLength) {
