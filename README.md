@@ -2,8 +2,7 @@ This repo serves as a trace for my experiments with PRU cores on TI's Sitara AM3
 
 The master branch contains no code, because I created one branch for each experiment. At the moment there are two experiments and branches with the appropriate names:
 
-can_experiment
-uart_experiment
+can_experiment and uart_experiment
 
 Please check out one of them and you will find source code in there along with a more in-depth README.md file.
 
