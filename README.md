@@ -11,4 +11,4 @@ At the moment can_experiment is the one that is more polished, while UART experi
 
 All code runs on PRU cores of AM335x processors and require other dependencies to be compiled. Namely pru-software-support-package project and PRU code generation tools - compiler, but please see README.md in can_experiment for more details.
 
-You will also need to compile a Linux distribution to run on your board. That distribution must include remoteproc and rpmsg drivers. I used Yocto Sumo for that, but there are other ways.
+You will also need to compile a Linux distribution to run on your board. That distribution must include remoteproc and rpmsg drivers. Also the device tree has to assign resources to remoteproc driver. I used Yocto Sumo for that, but there are other ways.
