@@ -12,9 +12,9 @@ PRU1_PROJ=button_led1
 # Both are set in setup.sh
 
 #PRU_CGT:=/usr/share/ti/cgt-pru
-PRU_CGT:=/home/arturs/AE_Custom_Linux_kernels_Yocto/non-yocto_build_envs/ti-cgt-pru_2.1.4
+PRU_CGT:=/home/arturs/CoreLab_Work/ti-cgt-pru_2.3.3
 #PRU_SUPPORT:=/usr/lib/ti/pru-software-support-package
-PRU_SUPPORT:=/home/arturs/AE_Custom_Linux_kernels_Yocto/non-yocto_build_envs/PRU_experiments_AM335x/pru-software-support-package
+PRU_SUPPORT:=/home/arturs/CoreLab_Work/pru-software-support-package
 
 LINKER_COMMAND_FILE=./AM335x_PRU.cmd
 LIBS=--library=$(PRU_SUPPORT)/lib/rpmsg_lib.lib

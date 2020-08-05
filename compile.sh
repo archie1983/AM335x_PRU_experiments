@@ -1,5 +1,5 @@
 #!/bin/bash
 
-export PATH="/home/arturs/AE_Custom_Linux_kernels_Yocto/non-yocto_build_envs/ti-cgt-pru_2.1.4/bin/:$PATH"
+export PATH="/home/arturs/CoreLab_Work/ti-cgt-pru_2.3.3/bin/:$PATH"
 
 make
