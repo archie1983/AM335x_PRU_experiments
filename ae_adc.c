@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "include/ae_adc.h"
-#include "include/sys_tscAdcSs.h"
+//#include "include/sys_tscAdcSs.h"
+#include <sys_tscAdcSs.h>
 
 volatile register uint32_t __R31;
 
@@ -26,13 +27,13 @@ void init_adc()
 	 * set the ADC_TSC STEPCONFIG1 register for channel 5  
 	 * Mode = 0; SW enabled, one-shot
 	 * Averaging = 0x3; 8 sample average
-	 * SEL_INP_SWC_3_0 = 0x4 = Channel 5
+	 * SEL_INP_SWC_3_0 = ADC_V_CHAN . Channels are 1-based, so e.g. 0x4 = Channel 5
          * SEL_INM_SWC_3_0 = 1xxx = VREFN (reduces noise in single ended mode)
 	 * use FIFO0
 	 */
 	ADC_TSC.STEPCONFIG1_bit.MODE = 0;
 	ADC_TSC.STEPCONFIG1_bit.AVERAGING = 3;
-	ADC_TSC.STEPCONFIG1_bit.SEL_INP_SWC_3_0 = 4;
+	ADC_TSC.STEPCONFIG1_bit.SEL_INP_SWC_3_0 = ADC_V_CHAN;
 	ADC_TSC.STEPCONFIG1_bit.SEL_INM_SWC_3_0 = 8;
 	ADC_TSC.STEPCONFIG1_bit.FIFO_SELECT = 0;
 
@@ -40,43 +41,15 @@ void init_adc()
 	 * set the ADC_TSC STEPCONFIG2 register for channel 6
 	 * Mode = 0; SW enabled, one-shot
 	 * Averaging = 0x3; 8 sample average
-	 * SEL_INP_SWC_3_0 = 0x5 = Channel 6
+	 * SEL_INP_SWC_3_0 = ADC_I_CHAN. Channels are 1-based, so e.g. 0x5 = Channel 6
          * SEL_INM_SWC_3_0 = 1xxx = VREFN (reduces noise in single ended mode)
 	 * use FIFO0
 	 */
 	ADC_TSC.STEPCONFIG2_bit.MODE = 0;
 	ADC_TSC.STEPCONFIG2_bit.AVERAGING = 3;
-	ADC_TSC.STEPCONFIG2_bit.SEL_INP_SWC_3_0 = 5;
+	ADC_TSC.STEPCONFIG2_bit.SEL_INP_SWC_3_0 = ADC_I_CHAN;
 	ADC_TSC.STEPCONFIG2_bit.SEL_INM_SWC_3_0 = 8;
 	ADC_TSC.STEPCONFIG2_bit.FIFO_SELECT = 0;
-
-	/* 
-	 * set the ADC_TSC STEPCONFIG3 register for channel 7
-	 * Mode = 0; SW enabled, one-shot
-	 * Averaging = 0x3; 8 sample average
-	 * SEL_INP_SWC_3_0 = 0x6 = Channel 7
-         * SEL_INM_SWC_3_0 = 1xxx = VREFN (reduces noise in single ended mode)
-	 * use FIFO0
-	 */
-	ADC_TSC.STEPCONFIG3_bit.MODE = 0;
-	ADC_TSC.STEPCONFIG3_bit.AVERAGING = 3;
-	ADC_TSC.STEPCONFIG3_bit.SEL_INP_SWC_3_0 = 6;
-	ADC_TSC.STEPCONFIG3_bit.SEL_INM_SWC_3_0 = 8;
-	ADC_TSC.STEPCONFIG3_bit.FIFO_SELECT = 0;
-
-	/* 
-	 * set the ADC_TSC STEPCONFIG4 register for channel 8
-	 * Mode = 0; SW enabled, one-shot
-	 * Averaging = 0x3; 8 sample average
-	 * SEL_INP_SWC_3_0 = 0x7= Channel 8
-         * SEL_INM_SWC_3_0 = 1xxx = VREFN (reduces noise in single ended mode)
-	 * use FIFO0
-	 */
-	ADC_TSC.STEPCONFIG4_bit.MODE = 0;
-	ADC_TSC.STEPCONFIG4_bit.AVERAGING = 3;
-	ADC_TSC.STEPCONFIG4_bit.SEL_INP_SWC_3_0 = 7;
-	ADC_TSC.STEPCONFIG4_bit.SEL_INM_SWC_3_0 = 8;
-	ADC_TSC.STEPCONFIG4_bit.FIFO_SELECT = 0;
 
 	/* 
 	 * set the ADC_TSC CTRL register
@@ -105,14 +78,10 @@ uint16_t read_adc(uint16_t adc_chan)
 
 	/* read from the specified ADC channel */
 	switch (adc_chan) {
-		case 5 :
+		case ADC_V_CHAN :
 			ADC_TSC.STEPENABLE_bit.STEP1 = 1;
-		case 6 :
+		case ADC_I_CHAN :
 			ADC_TSC.STEPENABLE_bit.STEP2 = 1;
-		case 7 :
-			ADC_TSC.STEPENABLE_bit.STEP3 = 1;
-		case 8 :
-			ADC_TSC.STEPENABLE_bit.STEP4 = 1;
 		default :
 			/* 
 			 * this error condition should not occur because of
