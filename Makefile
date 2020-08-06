@@ -41,7 +41,7 @@ AE_INTER_PRU = $(GEN_DIR)/ae_inter_pru
 # add the required firmwares to TARGETS
 # AE: Pay attention how AE extra modules need to come in first, so that when we get to compile and link PRU0_FW,
 # AE: we already have the extra modules available.
-TARGETS		= $(AE_DCAN) $(AE_INTER_PRU) $(PRU0_FW) $(PRU1_FW) $(GEN_DIR)/decay95.out
+TARGETS		= $(AE_ADC) $(AE_INTER_PRU) $(PRU0_FW) $(PRU1_FW) $(GEN_DIR)/decay95.out
 
 #------------------------------------------------------
 
@@ -58,9 +58,9 @@ $(GEN_DIR)/decay95.obj: $(PRU1_PROJ).c
 	@echo 'CC	$<'
 	@clpru --define=DECAY_RATE=95 --include_path=$(PRU_CGT)/include $(INCLUDE) $(CFLAGS) -fe $@ $<
 
-# AE: Adding an entry for dcan functionality. It's actually gen/ae_dcan so that it puts the .o file into the gen directory.
+# AE: Adding an entry for adc functionality. It's actually gen/ae_adc so that it puts the .o file into the gen directory.
 # AE: via the $@.o part in the command arguments.
-$(AE_DCAN): ae_adc.c
+$(AE_ADC): ae_adc.c
 	@mkdir -p $(GEN_DIR)
 	@echo 'CC    $@   $<'
 	@clpru --include_path=$(PRU_CGT)/include $(INCLUDE) $(CFLAGS) -fe $@.o $<
@@ -72,10 +72,10 @@ $(AE_INTER_PRU): ae_inter_pru.c
 	@echo 'CC    $@   $<'
 	@clpru --include_path=$(PRU_CGT)/include $(INCLUDE) $(CFLAGS) -fe $@.o $<
 
-# AE: Adding the object files of AE extra modules (e.g.: $(GEN_DIR)/ae_dcan.o) to be linked in.
+# AE: Adding the object files of AE extra modules (e.g.: $(GEN_DIR)/ae_adc.o) to be linked in.
 $(PRU0_FW): $(GEN_DIR)/$(PRU0_PROJ).obj
 	@echo 'LD	$^' 
-	@lnkpru -i$(PRU_CGT)/lib -i$(PRU_CGT)/include $(LFLAGS) -o $@ $^ $(AE_DCAN).o $(AE_INTER_PRU).o $(GEN_DIR)/$(AE_RPMSG).obj $(LINKER_COMMAND_FILE) --library=libc.a $(LIBS) $^
+	@lnkpru -i$(PRU_CGT)/lib -i$(PRU_CGT)/include $(LFLAGS) -o $@ $^ $(AE_ADC).o $(AE_INTER_PRU).o $(GEN_DIR)/$(AE_RPMSG).obj $(LINKER_COMMAND_FILE) --library=libc.a $(LIBS) $^
 
 $(PRU1_FW): $(GEN_DIR)/$(PRU1_PROJ).obj
 	@echo 'LD       $^'
@@ -117,7 +117,7 @@ run95:
 	@echo "-	pru core 0 is now loaded with $(GEN_DIR)/decay95.out"
 
 .PHONY: clean
-# Need to make sure that AE extra modules (e.g. ae_dcan) are taken care of and their asm files get deleted
+# Need to make sure that AE extra modules (e.g. ae_adc) are taken care of and their asm files get deleted
 clean:
 	@echo 'CLEAN	.'
 	@rm -rf $(GEN_DIR) $(PRU0_PROJ).asm $(PRU1_PROJ).asm ae_adc.asm ae_rpmsg.asm ae_inter_pru.asm

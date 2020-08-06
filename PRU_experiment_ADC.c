@@ -49,7 +49,7 @@ int main(void)
             strncpy((char *)lastReceivedMessageFromUser, "\0\0\0\0", 4);
             lastADCReadings[0] = read_adc(ADC_V_CHAN);
             lastADCReadings[0] = read_adc(ADC_I_CHAN);
-            sendMessageToUserSpace(lastADCReadings, 2);
+            sendMessageToUserSpace((uint8_t *)lastADCReadings, 4);
         } else if (strncmp ((char *)lastReceivedMessageFromUser, "test", 4) == 0) {
             strncpy((char *)lastReceivedMessageFromUser, "\0\0\0\0", 4);
             sendMessageToUserSpace("I'm UP", 6);
