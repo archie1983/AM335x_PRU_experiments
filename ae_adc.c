@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "include/ae_adc.h"
+#include "include/sys_tscAdcSs.h"
 
 volatile register uint32_t __R31;
 

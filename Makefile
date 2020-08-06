@@ -4,7 +4,7 @@
 #
 PROJ_NAME=ae
 #PROJ_NAME=$1
-PRU0_PROJ=PRU_experiment_CAN
+PRU0_PROJ=PRU_experiment_ADC
 PRU1_PROJ=button_led1
 
 # PRU_CGT environment variable must point to the TI PRU compiler directory.
@@ -31,7 +31,7 @@ PRU0_FW		=$(GEN_DIR)/$(PRU0_PROJ).out
 PRU1_FW         =$(GEN_DIR)/$(PRU1_PROJ).out
 
 # AE extra modules
-AE_DCAN = $(GEN_DIR)/ae_dcan
+AE_ADC = $(GEN_DIR)/ae_adc
 AE_RPMSG = ae_rpmsg
 AE_INTER_PRU = $(GEN_DIR)/ae_inter_pru
 
@@ -60,7 +60,7 @@ $(GEN_DIR)/decay95.obj: $(PRU1_PROJ).c
 
 # AE: Adding an entry for dcan functionality. It's actually gen/ae_dcan so that it puts the .o file into the gen directory.
 # AE: via the $@.o part in the command arguments.
-$(AE_DCAN): ae_dcan.c
+$(AE_DCAN): ae_adc.c
 	@mkdir -p $(GEN_DIR)
 	@echo 'CC    $@   $<'
 	@clpru --include_path=$(PRU_CGT)/include $(INCLUDE) $(CFLAGS) -fe $@.o $<
@@ -85,7 +85,7 @@ $(PRU1_FW): $(GEN_DIR)/$(PRU1_PROJ).obj
 # AE: firmware module because they both need the resource table (and other resources) and if we compile them
 # AE: separately, then linking later fails with a resource redefinition error.
 # AE: Also pay attention how we're NOT including the "-fe $@ " option in the command because we're now compiling
-# AE: more than one source file ("$<" which currently is "PRU_experiment_CAN.c" and "$(AE_RPMSG).c" which is ae_rpmsg.c)
+# AE: more than one source file ("$<" which currently is "PRU_experiment_ADC.c" and "$(AE_RPMSG).c" which is ae_rpmsg.c)
 $(GEN_DIR)/$(PRU0_PROJ).obj: $(PRU0_PROJ).c 
 	@mkdir -p $(GEN_DIR)
 	@echo 'CC	$<'
@@ -120,4 +120,4 @@ run95:
 # Need to make sure that AE extra modules (e.g. ae_dcan) are taken care of and their asm files get deleted
 clean:
 	@echo 'CLEAN	.'
-	@rm -rf $(GEN_DIR) $(PRU0_PROJ).asm $(PRU1_PROJ).asm ae_dcan.asm ae_rpmsg.asm ae_inter_pru.asm
+	@rm -rf $(GEN_DIR) $(PRU0_PROJ).asm $(PRU1_PROJ).asm ae_adc.asm ae_rpmsg.asm ae_inter_pru.asm
