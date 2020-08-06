@@ -102,14 +102,14 @@ struct my_resource_table resourceTable = {
 	},
 	/* the two vrings */
 	{
-		0,                      //da, will be populated by host, can't pass it in
+		FW_RSC_ADDR_ANY,        //da, will be populated by host, can't pass it in
 		16,                     //align (bytes),
 		PRU_RPMSG_VQ0_SIZE,     //num of descriptors
 		0,                      //notifyid, will be populated, can't pass right now
 		0                       //reserved
 	},
 	{
-		0,                      //da, will be populated by host, can't pass it in
+		FW_RSC_ADDR_ANY,        //da, will be populated by host, can't pass it in
 		16,                     //align (bytes),
 		PRU_RPMSG_VQ1_SIZE,     //num of descriptors
 		0,                      //notifyid, will be populated, can't pass right now
