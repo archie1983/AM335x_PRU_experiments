@@ -1,13 +1,15 @@
-# ARM_CCT environment variable must point to the ARM Cross-Compile Toolchain directory. E.g.:
-#(Linux) export ARM_CCT=${HOME}/ti-processor-sdk-linux-am335x-evm-02.00.00.00/linux-devkit/sysroots/x86_64-arago-linux/usr/bin
-ifndef ARM_CCT
+# CC environment variable must be set using the environment script of our Yocto build SDK, 
+# e.g.: /home/arturs/CoreLab_Work/Yocto/SDKs/BSP-Yocto-AM335x-PD19.1.1/environment-setup-cortexa8hf-neon-phytec-linux-gnueabi
+#
+# in the end CC environment variable should be something like this: 
+# CC=arm-phytec-linux-gnueabi-gcc  -march=armv7-a -marm -mfpu=neon -mfloat-abi=hard -mcpu=cortex-a8 --sysroot=/home/arturs/CoreLab_Work/Yocto/SDKs/BSP-Yocto-AM335x-PD19.1.1/sysroots/cortexa8hf-neon-phytec-linux-gnueabi
+ifndef CC
 define ERROR_BODY
 
 ************************************************************
-ARM_CCT cross-compiler toolchain environment variable is not set.
-Example given:
-(Linux) export ARM_CCT=${HOME}/CoreLab_Work/ti-processor-sdk-linux-am335x-evm-06.03.00.106/linux-devkit/sysroots/x86_64-arago-linux/usr/bin
-                       ${HOME}/CoreLab_Work/ti-processor-sdk-linux-am335x-evm-06.03.00.106/linux-devkit/sysroots/armv7at2hf-neon-linux-gnueabi/usr/include/stdio.h
+CC cross-compiler environment variable is not set.
+Please source your Yocto build SDK environment variables' setting script, 
+e.g.: /home/arturs/CoreLab_Work/Yocto/SDKs/BSP-Yocto-AM335x-PD19.1.1/environment-setup-cortexa8hf-neon-phytec-linux-gnueabi
 ************************************************************
 
 endef
