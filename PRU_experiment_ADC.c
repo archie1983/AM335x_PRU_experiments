@@ -47,8 +47,11 @@ int main(void)
         lastReceivedMessageFromUser = getLastReceivedMessage();
         if (strncmp ((char *)lastReceivedMessageFromUser, "read", 4) == 0) {
             strncpy((char *)lastReceivedMessageFromUser, "\0\0\0\0", 4);
-            lastADCReadings[0] = read_adc(ADC_V_CHAN);
+            //lastADCReadings[1] = 99;
+            //lastADCReadings[0] = 88;
             lastADCReadings[1] = read_adc(ADC_I_CHAN);
+            __delay_cycles(100000000);
+            lastADCReadings[0] = read_adc(ADC_V_CHAN);
             sendMessageToUserSpace((uint8_t *)lastADCReadings, 4);
         } else if (strncmp ((char *)lastReceivedMessageFromUser, "test", 4) == 0) {
             strncpy((char *)lastReceivedMessageFromUser, "\0\0\0\0", 4);

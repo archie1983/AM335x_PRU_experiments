@@ -46,7 +46,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#define RPMSG_MESSAGE_SIZE           4
+#define RPMSG_MESSAGE_SIZE           496
 char payload[RPMSG_MESSAGE_SIZE];
 
 /*
@@ -94,7 +94,8 @@ int main(int argc, char *argv[])
 
 		uint32_t v_and_i = readADCValuesForSentinel();
 
-		printf("V=%d , I=%d\n", (v_and_i & 0xFF00) >> 16, (v_and_i & 0xFF));
+		printf("V=%d , I=%d\n", (v_and_i & 0xFFFF), ((v_and_i & 0xFFFF0000) >> 16));
+		printf("COMBI=%d\n", v_and_i);
 
 	} else {
 		printf("ERROR: Command not recognized: %s", argv[0]);
@@ -200,110 +201,6 @@ static uint32_t readADCValuesForSentinel()
 	close(pfds[0].fd);
 
 	return returnedData;
-}
-
-/*
- * readADCchannel sends ADC channel number to PRU0 by writing to rpmsg_pru30
- * and receives the voltage as a 12 bit binary value
- */
-static uint16_t readADCchannel(const char *adcChannel)
-{
-
-	struct shared_struct message;
-
-	/* use character device /dev/rpmsg_pru30 */
-	char outputFilename[] = "/dev/rpmsg_pru30";
-
-	/* test that /dev/rpmsg_pru30 exists */
-	FILE *ofp;
-	uint16_t returnedVoltage;
-	ofp = fopen(outputFilename, "r");
-
-	if (ofp == NULL) {
-
-		printf("/dev/rpmsg_pru30 could not be opened. \n");
-		printf("Trying to initialize PRU using sysfs interface.\n");
-
-		FILE *sysfs_node;
-		char firmware[] = "/sys/class/remoteproc/remoteproc1/firmware";
-		char firmwareName[] = "PRU_ADC_onChip.out";
-		sysfs_node = fopen(firmware, "r+");
-		if (sysfs_node == NULL) {
-			printf("cannot open firmware sysfs_node");
-			return EXIT_FAILURE;
-		}
-		fwrite(&firmwareName, sizeof(uint8_t), sizeof(firmwareName),
-			sysfs_node);
-		fclose(sysfs_node);
-
-		char pruState[] = "/sys/class/remoteproc/remoteproc1/state";
-		char start[] = "start";
-		sysfs_node = fopen(pruState, "r+");
-		if (sysfs_node == NULL) {
-			printf("cannot open state sysfs_node");
-			return EXIT_FAILURE;
-		}
-		fwrite(&start, sizeof(uint8_t), sizeof(start), sysfs_node);
-		fclose(sysfs_node);
-
-		/* give RPMSG time to initialize */
-		sleep(3);
-
-		ofp = fopen(outputFilename, "r");
-
-		if (ofp == NULL) {
-			printf("ERROR: Could not open /dev/rpmsg_pru30\n");
-			exit(EXIT_FAILURE);
-		}
-	}
-
-	/* now we know that the character device exists */
-	fclose(ofp);
-
-	/* open the character device for read/write */
-	struct pollfd pfds[1];
-	pfds[0].fd = open(outputFilename, O_RDWR);
-	if (pfds[0].fd < 0) {
-		printf("failed to open /dev/rpmsg_pru30");
-		exit(EXIT_FAILURE);
-	}
-
-	/* Convert channel number from CHAR to uint16_t */
-	char *endptr;
-	uintmax_t val = strtoumax(&adcChannel[0],&endptr,10);
-	if (errno == ERANGE || val > UINT16_MAX || endptr == &adcChannel[0] ||
-			*endptr != '\0') {
-		printf("strtoumax had an error");
-		exit(EXIT_FAILURE);
-	}
-	message.channel = (uint16_t) val;
-
-	/* write data to the payload[] buffer in the PRU firmware. */
-	size_t result = write(pfds[0].fd, &message, sizeof(message));
-
-	/* poll for the received message */
-	pfds[0].events = POLLIN | POLLRDNORM;
-	int pollResult = 0;
-
-	uint32_t count = 0;
-	/* loop while rpmsg_pru_poll says there are no kfifo messages. */
-	while (pollResult <= 0) {
-		pollResult = poll(pfds,1,0);
-
-		/*
-		 * users may prefer to write code that does not block the ARM
-		 * core from addressing other tasks, and that contains timeout
-		 * logic to avoid an infinite lockup.
-		 */
-	}
-
-	/* read voltage and channel back */
-	size_t freadResult = read(pfds[0].fd, payload, RPMSG_MESSAGE_SIZE);
-	returnedVoltage = ((shared_struct *)payload)->voltage;
-
-	close(pfds[0].fd);
-
-	return returnedVoltage;
 }
 
 /*

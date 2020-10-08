@@ -14,8 +14,8 @@
 /*
  * The ADC channels that we'll be using - one for voltage and one for current.
  */
-#define ADC_V_CHAN 6
-#define ADC_I_CHAN 7
+#define ADC_V_CHAN 3
+#define ADC_I_CHAN 4
 
 /* shared_struct is used to pass data between ARM and PRU */
 typedef struct shared_struct{
