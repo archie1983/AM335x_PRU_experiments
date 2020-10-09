@@ -101,13 +101,12 @@ int main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 	} else if (opt == 'r') {
-		printf("2Reading V and I in Sentinel context...\n");
-		printf("AAAA\n");
+		printf("Reading V and I in Sentinel context\n");
 		size_t cnt_returned_values = readADCValuesForSentinel(value_buf_from_pru);
-		// do {
-		// 	cnt_returned_values--;
-		// 	printf("CNT=%d , V=%d\n", cnt_returned_values, value_buf_from_pru[cnt_returned_values]);
-		// } while (cnt_returned_values > 0);
+		do {
+			cnt_returned_values--;
+			printf("CNT=%d , V=%d\n", cnt_returned_values, value_buf_from_pru[cnt_returned_values]);
+		} while (cnt_returned_values > 0);
 
 		printf("CNT=%d\n", cnt_returned_values);
 
@@ -132,15 +131,12 @@ int main(int argc, char *argv[])
  */
 static size_t readADCValuesForSentinel(uint16_t* value_buf_from_pru)
 {
-	printf("HERE00-1\n");
 	/* use character device /dev/rpmsg_pru30 */
 	char outputFilename[] = "/dev/rpmsg_pru30";
-printf("HERE00-2\n");
 	/* test that /dev/rpmsg_pru30 exists */
 	FILE *ofp;
 	uint32_t returnedData;
 	ofp = fopen(outputFilename, "r");
-printf("HERE00-3\n");
 	if (ofp == NULL) {
 
 		printf("/dev/rpmsg_pru30 could not be opened. \n");
@@ -178,10 +174,10 @@ printf("HERE00-3\n");
 			exit(EXIT_FAILURE);
 		}
 	}
-printf("HERE0\n");
+
 	/* now we know that the character device exists */
 	fclose(ofp);
-printf("HERE0-1\n");
+
 	/* open the character device for read/write */
 	struct pollfd pfds[1];
 	pfds[0].fd = open(outputFilename, O_RDWR);
@@ -189,15 +185,14 @@ printf("HERE0-1\n");
 		printf("failed to open /dev/rpmsg_pru30");
 		exit(EXIT_FAILURE);
 	}
-printf("HERE0-2\n");
+
 	/* write the read command to the PRU. */
 	size_t result = write(pfds[0].fd, readCmd, sizeof(readCmd));
-printf("HERE0-3\n");
+
 	/* poll for the received message */
 	pfds[0].events = POLLIN | POLLRDNORM;
 	int pollResult = 0;
 
-  printf("HERE1\n");
 	uint32_t count = 0;
 	/* loop while rpmsg_pru_poll says there are no kfifo messages. */
 	while (pollResult <= 0) {
@@ -209,13 +204,13 @@ printf("HERE0-3\n");
 		 * logic to avoid an infinite lockup.
 		 */
 	}
-printf("HERE2\n");
+
 	/* read voltage and channel back */
 	size_t freadResult = read(pfds[0].fd, value_buf_from_pru, RPMSG_MESSAGE_SIZE);
 	//returnedData = *((uint32_t*) payload);
-printf("HERE3\n");
+
 	close(pfds[0].fd);
-printf("HERE4\n");
+
 	return freadResult;
 }
 

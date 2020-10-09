@@ -38,7 +38,7 @@ int main(void)
     /* Attempting to send a CAN data frame and a remote frame once every second */
     while (1) {
         //__delay_cycles(100000000); //# 500ms wait
-
+        __delay_cycles(1000000); //# 5ms wait
         fill_adc_queue();
 
         serveCommsWithARMCore();

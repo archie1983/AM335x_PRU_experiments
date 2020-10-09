@@ -28,6 +28,7 @@ volatile register uint32_t __R31;
  * FIFO0THRESHOLD: How many values do we want to accumulate in the FIFO before raising an interrupt
  * FIFO0DATA: Read this to get the next value in FIFO
  *
+ ADC_TSC : 0x44E0_D000
  */
 void init_adc()
 {
@@ -68,8 +69,8 @@ void init_adc()
 	ADC_TSC.STEPCONFIG1_bit.AVERAGING = 4; //# Average 16 samples
 	ADC_TSC.STEPCONFIG1_bit.SEL_INP_SWC_3_0 = ADC_V_CHAN;
 	ADC_TSC.STEPCONFIG1_bit.SEL_INM_SWC_3_0 = 8; //# No negative differential input, because DIFF_CNTRL = 0 (by default, hence not even set)
-	ADC_TSC.STEPCONFIG1_bit.SEL_RFM_SWC_1_0 = 3; //# SEL_RFM pins SW configuration: 0 = VSSA, 3 = VREFN. Experiment with this.
-	ADC_TSC.STEPCONFIG1_bit.SEL_RFP_SWC_2_0 = 3; //# SEL_RFP pins SW configutation: 0 = VDDA_ADC, 3 = VREFP. Experiment with this.
+	ADC_TSC.STEPCONFIG1_bit.SEL_RFM_SWC_1_0 = 0; //# SEL_RFM pins SW configuration: 0 = VSSA, 3 = VREFN. Experiment with this.
+	ADC_TSC.STEPCONFIG1_bit.SEL_RFP_SWC_2_0 = 0; //# SEL_RFP pins SW configutation: 0 = VDDA_ADC, 3 = VREFP. Experiment with this.
 	ADC_TSC.STEPDELAY1_bit.OPENDELAY = 3; //# OPENDELAY = 3 for 10KHz measurement frequency
 	ADC_TSC.STEPDELAY1_bit.SAMPLEDELAY = 148; //# SAMPLEDELAY = 148 for 10KHz measurement frequency
 	ADC_TSC.STEPCONFIG1_bit.FIFO_SELECT = 0; //# FIFO0 for data
@@ -79,11 +80,26 @@ void init_adc()
 	ADC_TSC.STEPCONFIG2_bit.AVERAGING = 4; //# Average 16 samples
 	ADC_TSC.STEPCONFIG2_bit.SEL_INP_SWC_3_0 = ADC_I_CHAN;
 	ADC_TSC.STEPCONFIG2_bit.SEL_INM_SWC_3_0 = 8; //# No negative differential input, because DIFF_CNTRL = 0 (by default, hence not even set)
-	ADC_TSC.STEPCONFIG2_bit.SEL_RFM_SWC_1_0 = 3; //# SEL_RFM pins SW configuration: 0 = VSSA, 3 = VREFN. Experiment with this.
-	ADC_TSC.STEPCONFIG2_bit.SEL_RFP_SWC_2_0 = 3; //# SEL_RFP pins SW configutation: 0 = VDDA_ADC, 3 = VREFP. Experiment with this.
+	ADC_TSC.STEPCONFIG2_bit.SEL_RFM_SWC_1_0 = 0; //# SEL_RFM pins SW configuration: 0 = VSSA, 3 = VREFN. Experiment with this.
+	ADC_TSC.STEPCONFIG2_bit.SEL_RFP_SWC_2_0 = 0; //# SEL_RFP pins SW configutation: 0 = VDDA_ADC, 3 = VREFP. Experiment with this.
 	ADC_TSC.STEPDELAY2_bit.OPENDELAY = 3; //# OPENDELAY = 3 for 10KHz measurement frequency
 	ADC_TSC.STEPDELAY2_bit.SAMPLEDELAY = 148; //# SAMPLEDELAY = 148 for 10KHz measurement frequency
 	ADC_TSC.STEPCONFIG2_bit.FIFO_SELECT = 1; //# FIFO1 for data
+
+	/**
+	 * Mask the FIFO buffer interrupts - both for overflow and underflow
+	 */
+	 ADC_TSC.IRQENABLE_CLR_bit.FIFO0_OVERRUN = 1;
+	 ADC_TSC.IRQENABLE_CLR_bit.FIFO0_UNDERFLOW = 1;
+	 ADC_TSC.IRQENABLE_CLR_bit.FIFO0_THRESHOLD = 1;
+	 ADC_TSC.IRQENABLE_CLR_bit.FIFO1_OVERRUN = 1;
+	 ADC_TSC.IRQENABLE_CLR_bit.FIFO1_UNDERFLOW = 1;
+	 ADC_TSC.IRQENABLE_CLR_bit.FIFO1_THRESHOLD = 1;
+
+	 ADC_TSC.FIFO1THRESHOLD_bit.FIFO0_THRESHOLD_LEVEL = 50;
+	 ADC_TSC.FIFO0THRESHOLD_bit.FIFO0_THRESHOLD_LEVEL = 50;
+
+
 
 	/*
 	 * set the ADC_TSC CTRL register
@@ -105,7 +121,7 @@ void fill_adc_queue() {
 	/*
 	 * Read FIFO0 until there's nothing left and put all new data into the queue.
 	 */
-	values_in_fifo = ADC_TSC.FIFO0COUNT;
+	values_in_fifo = ADC_TSC.FIFO0COUNT_bit.WORDS_IN_FIFO0;
 	while (values_in_fifo > 0) {
 		q_end_element = ADC_TSC.FIFO0DATA_bit.ADCDATA;
 		advance_q_end();
@@ -131,6 +147,7 @@ void empty_adc_queue(uint16_t* buffer_for_values, uint16_t* cnt_values_transferr
 	 */
 	if (q_overflowed) {
 		rectify_overflow();
+		q_overflowed = 0;
 	}
 
 	while(!is_q_empty() && *cnt_values_transferred < MAX_UNLOAD_CNT_FROM_QUEUE) {

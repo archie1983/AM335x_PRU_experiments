@@ -960,4 +960,3 @@ typedef struct {
 #define ADC_TSC (*((volatile sysTscAdcSs*)0x44E0D000))
 
 #endif /* _SYS_TSC_ADC_SS_H_ */
-
