@@ -14,7 +14,20 @@ volatile register uint32_t __R31;
  * When in continuous mode, both the open delay and sample delay apply for each step
  * and sample delay applies for each sample that will be averaged.
  *
- * TSC_ADC_SS, STEPCONFIG1, STEPDELAY1
+ * TSC_ADC_SS:
+ * STEPCONFIG1: Averaging, channel, FIFO and reference selection
+ * STEPDELAY1: Sample delay and open delay
+ * IRQSTATUS_RAW: Unmasked interrup states
+ * IRQENABLE_SET: Set (unmask) interrupts
+ * IRQENABLE_CLR: Unset (mask) interrupts
+ * ADC_CLKDIV: ADC clock division
+ * STEPENABLE: Enabling steps
+ * (IDLECONFIG, TS_CHARGE_STEPCONFIG,
+ * TS_CHARGE_DELAY)
+ * FIFO0COUNT: How many values are there in the FIFO
+ * FIFO0THRESHOLD: How many values do we want to accumulate in the FIFO before raising an interrupt
+ * FIFO0DATA: Read this to get the next value in FIFO
+ *
  */
 void init_adc()
 {
@@ -27,6 +40,22 @@ void init_adc()
 	}
 
 	/*
+	 * How frequently will we be taking measurements?
+	 * Our ADC clock is 24MHz if we're not dividing it down.
+	 * To get 1 sample, we'll need to wait the following:
+	 * 1x "open delay" clock cycles
+	 * 16x ("sample delay" + 1) clock cycles (if we're averaging 16 values)
+	 * 1x "conversion time" clock cycles, which includes digitizing sample and outputting data. This is always 13 cycles long
+	 *
+	 * So maximum measurement frequency with opend delay=0 and sample delay=0 and no averaging would be:
+	 * 24MHz / (1 + 13) = around 1.7MHz
+	 * If we average 16x, then: 24MHz / (16 * 1 + 13) = around 800KHz
+	 *
+	 * If we wanted around 10KHz, then we could introduce sample delay of 148 cycles
+	 * and open delay of 3 cycles: 24MHz / (16 * (148 + 1) + 3 + 13) = 10KHz
+	 */
+
+	/*
 	 * Set the ADC_TSC CTRL register.
 	 * Disable TSC_ADC_SS module so we can program it.
 	 * Set step configuration registers to writable.
@@ -34,33 +63,27 @@ void init_adc()
 	ADC_TSC.CTRL_bit.ENABLE = 0;
 	ADC_TSC.CTRL_bit.STEPCONFIG_WRITEPROTECT_N_ACTIVE_LOW = 1;
 
-	/*
-	 * set the ADC_TSC STEPCONFIG1 register for channel 5
-	 * Mode = 0; SW enabled, one-shot
-	 * Averaging = 0x3; 8 sample average
-	 * SEL_INP_SWC_3_0 = ADC_V_CHAN . Channels are 1-based, so e.g. 0x4 = Channel 5
-         * SEL_INM_SWC_3_0 = 1xxx = VREFN (reduces noise in single ended mode)
-	 * use FIFO0
-	 */
-	ADC_TSC.STEPCONFIG1_bit.MODE = 0;
-	ADC_TSC.STEPCONFIG1_bit.AVERAGING = 3;
+	//# STEP1 for V channel
+	ADC_TSC.STEPCONFIG1_bit.MODE = 1; //# Software enabled, continuous
+	ADC_TSC.STEPCONFIG1_bit.AVERAGING = 4; //# Average 16 samples
 	ADC_TSC.STEPCONFIG1_bit.SEL_INP_SWC_3_0 = ADC_V_CHAN;
-	ADC_TSC.STEPCONFIG1_bit.SEL_INM_SWC_3_0 = 8;
-	ADC_TSC.STEPCONFIG1_bit.FIFO_SELECT = 0;
+	ADC_TSC.STEPCONFIG1_bit.SEL_INM_SWC_3_0 = 8; //# No negative differential input, because DIFF_CNTRL = 0 (by default, hence not even set)
+	ADC_TSC.STEPCONFIG1_bit.SEL_RFM_SWC_1_0 = 3; //# SEL_RFM pins SW configuration: 0 = VSSA, 3 = VREFN. Experiment with this.
+	ADC_TSC.STEPCONFIG1_bit.SEL_RFP_SWC_2_0 = 3; //# SEL_RFP pins SW configutation: 0 = VDDA_ADC, 3 = VREFP. Experiment with this.
+	ADC_TSC.STEPDELAY1_bit.OPENDELAY = 3; //# OPENDELAY = 3 for 10KHz measurement frequency
+	ADC_TSC.STEPDELAY1_bit.SAMPLEDELAY = 148; //# SAMPLEDELAY = 148 for 10KHz measurement frequency
+	ADC_TSC.STEPCONFIG1_bit.FIFO_SELECT = 0; //# FIFO0 for data
 
-	/*
-	 * set the ADC_TSC STEPCONFIG2 register for channel 6
-	 * Mode = 0; SW enabled, one-shot
-	 * Averaging = 0x3; 8 sample average
-	 * SEL_INP_SWC_3_0 = ADC_I_CHAN. Channels are 1-based, so e.g. 0x5 = Channel 6
-         * SEL_INM_SWC_3_0 = 1xxx = VREFN (reduces noise in single ended mode)
-	 * use FIFO0
-	 */
-	ADC_TSC.STEPCONFIG2_bit.MODE = 0;
-	ADC_TSC.STEPCONFIG2_bit.AVERAGING = 3;
+	//# STEP2 for I channel
+	ADC_TSC.STEPCONFIG2_bit.MODE = 1; //# Software enabled, continuous
+	ADC_TSC.STEPCONFIG2_bit.AVERAGING = 4; //# Average 16 samples
 	ADC_TSC.STEPCONFIG2_bit.SEL_INP_SWC_3_0 = ADC_I_CHAN;
-	ADC_TSC.STEPCONFIG2_bit.SEL_INM_SWC_3_0 = 8;
-	ADC_TSC.STEPCONFIG2_bit.FIFO_SELECT = 0;
+	ADC_TSC.STEPCONFIG2_bit.SEL_INM_SWC_3_0 = 8; //# No negative differential input, because DIFF_CNTRL = 0 (by default, hence not even set)
+	ADC_TSC.STEPCONFIG2_bit.SEL_RFM_SWC_1_0 = 3; //# SEL_RFM pins SW configuration: 0 = VSSA, 3 = VREFN. Experiment with this.
+	ADC_TSC.STEPCONFIG2_bit.SEL_RFP_SWC_2_0 = 3; //# SEL_RFP pins SW configutation: 0 = VDDA_ADC, 3 = VREFP. Experiment with this.
+	ADC_TSC.STEPDELAY2_bit.OPENDELAY = 3; //# OPENDELAY = 3 for 10KHz measurement frequency
+	ADC_TSC.STEPDELAY2_bit.SAMPLEDELAY = 148; //# SAMPLEDELAY = 148 for 10KHz measurement frequency
+	ADC_TSC.STEPCONFIG2_bit.FIFO_SELECT = 1; //# FIFO1 for data
 
 	/*
 	 * set the ADC_TSC CTRL register
@@ -71,6 +94,27 @@ void init_adc()
 	ADC_TSC.CTRL_bit.STEPCONFIG_WRITEPROTECT_N_ACTIVE_LOW = 0;
 	ADC_TSC.CTRL_bit.STEP_ID_TAG = 1;
 	ADC_TSC.CTRL_bit.ENABLE = 1;
+}
+
+uint8_t values_in_fifo = 0;
+void fill_adc_queue() {
+	/*
+	 * Read FIFO0 until there's nothing left and put all new data into the queue.
+	 */
+	values_in_fifo = ADC_TSC.FIFO0COUNT;
+	while (values_in_fifo > 0) {
+		q_end_element = ADC_TSC.FIFO0DATA_bit.ADCDATA;
+		advance_q_end();
+		values_in_fifo--;
+
+		/**
+		 * If the queue is empty after adding and element to it, then we've
+		 * overflowed.
+		 */
+		if (is_q_empty()) {
+			q_overflowed = 1;
+		}
+	}
 }
 
 uint16_t read_adc(uint16_t adc_chan)
