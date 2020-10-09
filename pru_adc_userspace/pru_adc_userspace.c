@@ -47,7 +47,18 @@
 #include <errno.h>
 
 #define RPMSG_MESSAGE_SIZE           496
-char payload[RPMSG_MESSAGE_SIZE];
+
+/**
+ * This is the upper limit of elements that we want to unload into the buffer
+ * when we empty the queue, because we can't send more than this to the user
+ * space. The limit of bytes is RPMSG_MESSAGE_SIZE, but we're sending uint16_t
+ * values.
+ */
+#define MAX_UNLOAD_CNT_FROM_QUEUE RPMSG_MESSAGE_SIZE / 2
+
+//char payload[RPMSG_MESSAGE_SIZE];
+
+uint16_t value_buf_from_pru[MAX_UNLOAD_CNT_FROM_QUEUE];
 
 /*
  * We'll send this command when we want the ADC channels to be read by the PRU.
@@ -64,7 +75,7 @@ char charVoltageVal[] = "0.0000";
 
 static char * convertVoltage(const uint16_t rawVoltage);
 static uint16_t readADCchannel(const char *adcChannel);
-static uint32_t readADCValuesForSentinel();
+static size_t readADCValuesForSentinel(uint16_t* value_buf_from_pru);
 
 int main(int argc, char *argv[])
 {
@@ -90,12 +101,15 @@ int main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 	} else if (opt == 'r') {
-		printf("Reading V and I in Sentinel context.\n");
+		printf("2Reading V and I in Sentinel context...\n");
+		printf("AAAA\n");
+		size_t cnt_returned_values = readADCValuesForSentinel(value_buf_from_pru);
+		// do {
+		// 	cnt_returned_values--;
+		// 	printf("CNT=%d , V=%d\n", cnt_returned_values, value_buf_from_pru[cnt_returned_values]);
+		// } while (cnt_returned_values > 0);
 
-		uint32_t v_and_i = readADCValuesForSentinel();
-
-		printf("V=%d , I=%d\n", (v_and_i & 0xFFFF), ((v_and_i & 0xFFFF0000) >> 16));
-		printf("COMBI=%d\n", v_and_i);
+		printf("CNT=%d\n", cnt_returned_values);
 
 	} else {
 		printf("ERROR: Command not recognized: %s", argv[0]);
@@ -116,16 +130,17 @@ int main(int argc, char *argv[])
  * readADCValuesForSentinel sends the "read" command to PRU0 by writing to rpmsg_pru30
  * and receives two ADC channel readings (16 bit each, but packed as one 32-bit value).
  */
-static uint32_t readADCValuesForSentinel()
+static size_t readADCValuesForSentinel(uint16_t* value_buf_from_pru)
 {
+	printf("HERE00-1\n");
 	/* use character device /dev/rpmsg_pru30 */
 	char outputFilename[] = "/dev/rpmsg_pru30";
-
+printf("HERE00-2\n");
 	/* test that /dev/rpmsg_pru30 exists */
 	FILE *ofp;
 	uint32_t returnedData;
 	ofp = fopen(outputFilename, "r");
-
+printf("HERE00-3\n");
 	if (ofp == NULL) {
 
 		printf("/dev/rpmsg_pru30 could not be opened. \n");
@@ -139,8 +154,8 @@ static uint32_t readADCValuesForSentinel()
 			printf("cannot open firmware sysfs_node");
 			return EXIT_FAILURE;
 		}
-		fwrite(&firmwareName, sizeof(uint8_t), sizeof(firmwareName),
-			sysfs_node);
+
+		fwrite(&firmwareName, sizeof(uint8_t), sizeof(firmwareName), sysfs_node);
 		fclose(sysfs_node);
 
 		char pruState[] = "/sys/class/remoteproc/remoteproc1/state";
@@ -163,10 +178,10 @@ static uint32_t readADCValuesForSentinel()
 			exit(EXIT_FAILURE);
 		}
 	}
-
+printf("HERE0\n");
 	/* now we know that the character device exists */
 	fclose(ofp);
-
+printf("HERE0-1\n");
 	/* open the character device for read/write */
 	struct pollfd pfds[1];
 	pfds[0].fd = open(outputFilename, O_RDWR);
@@ -174,14 +189,15 @@ static uint32_t readADCValuesForSentinel()
 		printf("failed to open /dev/rpmsg_pru30");
 		exit(EXIT_FAILURE);
 	}
-
-	/* write data to the payload[] buffer in the PRU firmware. */
+printf("HERE0-2\n");
+	/* write the read command to the PRU. */
 	size_t result = write(pfds[0].fd, readCmd, sizeof(readCmd));
-
+printf("HERE0-3\n");
 	/* poll for the received message */
 	pfds[0].events = POLLIN | POLLRDNORM;
 	int pollResult = 0;
 
+  printf("HERE1\n");
 	uint32_t count = 0;
 	/* loop while rpmsg_pru_poll says there are no kfifo messages. */
 	while (pollResult <= 0) {
@@ -193,14 +209,14 @@ static uint32_t readADCValuesForSentinel()
 		 * logic to avoid an infinite lockup.
 		 */
 	}
-
+printf("HERE2\n");
 	/* read voltage and channel back */
-	size_t freadResult = read(pfds[0].fd, payload, RPMSG_MESSAGE_SIZE);
-	returnedData = *((uint32_t*) payload);
-
+	size_t freadResult = read(pfds[0].fd, value_buf_from_pru, RPMSG_MESSAGE_SIZE);
+	//returnedData = *((uint32_t*) payload);
+printf("HERE3\n");
 	close(pfds[0].fd);
-
-	return returnedData;
+printf("HERE4\n");
+	return freadResult;
 }
 
 /*

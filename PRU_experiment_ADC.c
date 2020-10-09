@@ -6,6 +6,8 @@
 
 uint8_t * lastReceivedMessageFromUser;
 uint16_t lastADCReadings[2];
+uint16_t return_buffer[MAX_UNLOAD_CNT_FROM_QUEUE];
+uint16_t cnt_elements_to_return = 0;
 
 int main(void)
 {
@@ -22,20 +24,22 @@ int main(void)
     pokePRU1Processor();
 
     /*
-     * Initialise ADC steps and other ADC configuration.
-     */
-    init_adc();
-
-    /*
      * Set up comms with ARM core
      */
     setUpCommsWithARMCore();
 
     pokePRU1Processor(); //# so that I can see that it has gone through initialisation
+    //sendMessageToUserSpace("99", 2);
+    /*
+     * Initialise ADC steps and other ADC configuration.
+     */
+    init_adc();
 
     /* Attempting to send a CAN data frame and a remote frame once every second */
     while (1) {
         //__delay_cycles(100000000); //# 500ms wait
+
+        fill_adc_queue();
 
         serveCommsWithARMCore();
 
@@ -49,10 +53,16 @@ int main(void)
             strncpy((char *)lastReceivedMessageFromUser, "\0\0\0\0", 4);
             //lastADCReadings[1] = 99;
             //lastADCReadings[0] = 88;
-            lastADCReadings[1] = read_adc(ADC_I_CHAN);
-            __delay_cycles(100000000);
-            lastADCReadings[0] = read_adc(ADC_V_CHAN);
-            sendMessageToUserSpace((uint8_t *)lastADCReadings, 4);
+            //lastADCReadings[1] = read_adc(ADC_I_CHAN);
+            //__delay_cycles(100000000);
+            //lastADCReadings[0] = read_adc(ADC_V_CHAN);
+            //sendMessageToUserSpace((uint8_t *)lastADCReadings, 4);
+            empty_adc_queue(return_buffer, &cnt_elements_to_return);
+            if (cnt_elements_to_return > 0) {
+              sendMessageToUserSpace((uint8_t *)return_buffer, cnt_elements_to_return * 2);
+            } else {
+              sendMessageToUserSpace("I'm UP", 6);
+            }
         } else if (strncmp ((char *)lastReceivedMessageFromUser, "test", 4) == 0) {
             strncpy((char *)lastReceivedMessageFromUser, "\0\0\0\0", 4);
             sendMessageToUserSpace("I'm UP", 6);

@@ -3,6 +3,12 @@
  */
 #include <stdint.h>
 
+/**
+ * We need this header for the value of RPMSG_MESSAGE_SIZE- that's the upper
+ * limit of bytes that we want to unload into the buffer when we empty the queue.
+ */
+#include "pru_rpmsg.h"
+
 #ifndef PRU_SRAM
 #define PRU_SRAM __far __attribute__((cregister("PRU_SHAREDMEM", near)))
 #endif
@@ -23,8 +29,15 @@
  *
  * This must be greater than 128 - the ADC FIFO size for the queue logic to work.
  */
-#define ADC_QUEUE_LENGTH 5000
+#define ADC_QUEUE_LENGTH 500
 
+/**
+ * This is the upper limit of elements that we want to unload into the buffer
+ * when we empty the queue, because we can't send more than this to the user
+ * space. The limit of bytes is RPMSG_MESSAGE_SIZE, but we're sending uint16_t
+ * values.
+ */
+#define MAX_UNLOAD_CNT_FROM_QUEUE RPMSG_MESSAGE_SIZE / 2
 
 void init_adc();
 uint16_t read_adc(uint16_t adc_chan);
@@ -66,6 +79,7 @@ uint8_t q_overflowed;
 #define advance_q_end() q_end=(q_end+1)%ADC_QUEUE_LENGTH
 #define q_start_element adcQueue[q_start]
 #define q_end_element adcQueue[q_end]
+#define rectify_overflow() q_start=(q_end+1)%ADC_QUEUE_LENGTH
 
 /**
  * This function will service the queue in which we're offloading the FIFO values.
@@ -76,6 +90,7 @@ void fill_adc_queue();
 
 /**
  * This function will store as many values as possible from the queue to the
- * passed buffer unload_values. It will return the number of values transferred.
+ * passed buffer buffer_for_values. It will store the number of values
+ * transferred into the cnt_values_transferred parameter.
  */
-uint16_t empty_adc_queue(uint16_t* unload_values);
+void empty_adc_queue(uint16_t* buffer_for_values, uint16_t* cnt_values_transferred);

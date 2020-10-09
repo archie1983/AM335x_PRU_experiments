@@ -97,6 +97,10 @@ void init_adc()
 }
 
 uint8_t values_in_fifo = 0;
+
+/**
+ * Takes the values from FIFO and puts them into the queue.
+ */
 void fill_adc_queue() {
 	/*
 	 * Read FIFO0 until there's nothing left and put all new data into the queue.
@@ -114,6 +118,25 @@ void fill_adc_queue() {
 		if (is_q_empty()) {
 			q_overflowed = 1;
 		}
+	}
+}
+
+
+void empty_adc_queue(uint16_t* buffer_for_values, uint16_t* cnt_values_transferred) {
+	*cnt_values_transferred = 0;
+
+	/*
+	 * If queue has overflowed, then we need to read from q_end to q_end until
+	 * we've read it all. In other words, the q_start
+	 */
+	if (q_overflowed) {
+		rectify_overflow();
+	}
+
+	while(!is_q_empty() && *cnt_values_transferred < MAX_UNLOAD_CNT_FROM_QUEUE) {
+		buffer_for_values[*cnt_values_transferred] = q_start_element;
+		advance_q_start();
+		*cnt_values_transferred++;
 	}
 }
 
