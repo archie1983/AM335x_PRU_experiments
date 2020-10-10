@@ -6,8 +6,14 @@
 /**
  * We need this header for the value of RPMSG_MESSAGE_SIZE- that's the upper
  * limit of bytes that we want to unload into the buffer when we empty the queue.
+ *
+ * NOTE: It is easier to just define the single constant that we need - it's easier
+ * for unit tests.
  */
-#include "pru_rpmsg.h"
+//#include <pru_rpmsg.h>
+/* The maximum size of the buffer message */
+#define RPMSG_MESSAGE_SIZE			496
+#include <stdint.h>
 
 #endif
 
