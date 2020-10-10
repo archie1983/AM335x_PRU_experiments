@@ -1,22 +1,26 @@
+#ifndef _AE_RPMSG_H_
+
+#define _AE_RPMSG_H_
+
 #include <stdint.h>
 /*
  * Declarations for RPMSG
  */
- 
+
 /* Host-0 Interrupt sets bit 30 in register R31 */
 #define HOST_INT ((uint32_t) 1 << 30)
 /* The PRU-ICSS system events used for RPMsg are defined in the Linux device tree
  * PRU0 uses system event 16 (To ARM) and 17 (From ARM)
  * PRU1 uses system event 18 (To ARM) and 19 (From ARM)
  */
-#define TO_ARM_HOST 16 
+#define TO_ARM_HOST 16
 #define FROM_ARM_HOST 17
 /*
  * Using the name 'rpmsg-pru' will probe the rpmsg_pru driver found
  * at linux-x.y.z/drivers/rpmsg/rpmsg_pru.c
  */
-#define CHAN_NAME "rpmsg-pru" 
-#define CHAN_DESC "Channel 30" 
+#define CHAN_NAME "rpmsg-pru"
+#define CHAN_DESC "Channel 30"
 #define CHAN_PORT 30
 
 /*
@@ -31,3 +35,5 @@ uint8_t * getLastReceivedMessage();
 void sendMessageToUserSpace(uint8_t*, uint16_t);
 uint16_t getLastReceivedMessageLength();
 void resetLastReceivedMessageLength();
+
+#endif

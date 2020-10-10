@@ -1,4 +1,4 @@
-## 
+##
 # Copyright (c) 2016 Zubeen Tolani <ZeekHuge - zeekhuge@gmail.com>
 # Copyright (c) 2017 Texas Instruments - Jason Kridner <jdk@ti.com>
 #
@@ -34,6 +34,7 @@ PRU1_FW         =$(GEN_DIR)/$(PRU1_PROJ).out
 AE_ADC = $(GEN_DIR)/ae_adc
 AE_RPMSG = ae_rpmsg
 AE_INTER_PRU = $(GEN_DIR)/ae_inter_pru
+AE_QUEUE = $(GEN_DIR)/ae_queue
 
 # -----------------------------------------------------
 # Variable to edit in the makefile
@@ -41,7 +42,7 @@ AE_INTER_PRU = $(GEN_DIR)/ae_inter_pru
 # add the required firmwares to TARGETS
 # AE: Pay attention how AE extra modules need to come in first, so that when we get to compile and link PRU0_FW,
 # AE: we already have the extra modules available.
-TARGETS		= $(AE_ADC) $(AE_INTER_PRU) $(PRU0_FW) $(PRU1_FW) $(GEN_DIR)/decay95.out
+TARGETS		= $(AE_ADC) $(AE_INTER_PRU) $(AE_QUEUE) $(PRU0_FW) $(PRU1_FW) $(GEN_DIR)/decay95.out
 
 #------------------------------------------------------
 
@@ -50,10 +51,10 @@ all: $(TARGETS)
 	@echo '-	Generated firmwares are : $^'
 
 $(GEN_DIR)/decay95.out:  $(GEN_DIR)/decay95.obj
-	@echo 'LD	$^' 
+	@echo 'LD	$^'
 	@lnkpru -i$(PRU_CGT)/lib -i$(PRU_CGT)/include $(LFLAGS) -o $@ $^  $(LINKER_COMMAND_FILE) --library=libc.a $(LIBS) $^
 
-$(GEN_DIR)/decay95.obj: $(PRU1_PROJ).c 
+$(GEN_DIR)/decay95.obj: $(PRU1_PROJ).c
 	@mkdir -p $(GEN_DIR)
 	@echo 'CC	$<'
 	@clpru --define=DECAY_RATE=95 --include_path=$(PRU_CGT)/include $(INCLUDE) $(CFLAGS) -fe $@ $<
@@ -65,7 +66,14 @@ $(AE_ADC): ae_adc.c
 	@echo 'CC    $@   $<'
 	@clpru --include_path=$(PRU_CGT)/include $(INCLUDE) $(CFLAGS) -fe $@.o $<
 
-# AE: Adding an entry for inter-pru functionality (event notification). It's actually gen/ae_inter_pru so that it puts the 
+# AE: Adding an entry for queue functionality. It's actually gen/ae_queue so that it puts the .o file into the gen directory.
+# AE: via the $@.o part in the command arguments.
+$(AE_QUEUE): ae_queue.c
+	@mkdir -p $(GEN_DIR)
+	@echo 'CC    $@   $<'
+	@clpru --include_path=$(PRU_CGT)/include $(INCLUDE) $(CFLAGS) -fe $@.o $<
+
+# AE: Adding an entry for inter-pru functionality (event notification). It's actually gen/ae_inter_pru so that it puts the
 # AE: .o file into the gen directory via the $@.o part in the command arguments.
 $(AE_INTER_PRU): ae_inter_pru.c
 	@mkdir -p $(GEN_DIR)
@@ -74,8 +82,8 @@ $(AE_INTER_PRU): ae_inter_pru.c
 
 # AE: Adding the object files of AE extra modules (e.g.: $(GEN_DIR)/ae_adc.o) to be linked in.
 $(PRU0_FW): $(GEN_DIR)/$(PRU0_PROJ).obj
-	@echo 'LD	$^' 
-	@lnkpru -i$(PRU_CGT)/lib -i$(PRU_CGT)/include $(LFLAGS) -o $@ $^ $(AE_ADC).o $(AE_INTER_PRU).o $(GEN_DIR)/$(AE_RPMSG).obj $(LINKER_COMMAND_FILE) --library=libc.a $(LIBS) $^
+	@echo 'LD	$^'
+	@lnkpru -i$(PRU_CGT)/lib -i$(PRU_CGT)/include $(LFLAGS) -o $@ $^ $(AE_ADC).o $(AE_QUEUE).o $(AE_INTER_PRU).o $(GEN_DIR)/$(AE_RPMSG).obj $(LINKER_COMMAND_FILE) --library=libc.a $(LIBS) $^
 
 $(PRU1_FW): $(GEN_DIR)/$(PRU1_PROJ).obj
 	@echo 'LD       $^'
@@ -86,7 +94,7 @@ $(PRU1_FW): $(GEN_DIR)/$(PRU1_PROJ).obj
 # AE: separately, then linking later fails with a resource redefinition error.
 # AE: Also pay attention how we're NOT including the "-fe $@ " option in the command because we're now compiling
 # AE: more than one source file ("$<" which currently is "PRU_experiment_ADC.c" and "$(AE_RPMSG).c" which is ae_rpmsg.c)
-$(GEN_DIR)/$(PRU0_PROJ).obj: $(PRU0_PROJ).c 
+$(GEN_DIR)/$(PRU0_PROJ).obj: $(PRU0_PROJ).c
 	@mkdir -p $(GEN_DIR)
 	@echo 'CC	$<'
 	@clpru --include_path=$(PRU_CGT)/include $(INCLUDE) $(CFLAGS) $< $(AE_RPMSG).c
@@ -120,4 +128,4 @@ run95:
 # Need to make sure that AE extra modules (e.g. ae_adc) are taken care of and their asm files get deleted
 clean:
 	@echo 'CLEAN	.'
-	@rm -rf $(GEN_DIR) $(PRU0_PROJ).asm $(PRU1_PROJ).asm ae_adc.asm ae_rpmsg.asm ae_inter_pru.asm
+	@rm -rf $(GEN_DIR) $(PRU0_PROJ).asm $(PRU1_PROJ).asm ae_adc.asm ae_queue.asm ae_rpmsg.asm ae_inter_pru.asm

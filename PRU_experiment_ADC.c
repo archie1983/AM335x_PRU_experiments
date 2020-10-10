@@ -2,6 +2,7 @@
 #include "include/ae_inter_pru.h"
 #include "include/ae_adc.h"
 //#include "include/PRU_experiment.h"
+#include "include/ae_queue.h"
 #include <string.h>
 
 uint8_t * lastReceivedMessageFromUser;

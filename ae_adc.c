@@ -2,6 +2,7 @@
 #include "include/ae_adc.h"
 //#include "include/sys_tscAdcSs.h"
 #include <sys_tscAdcSs.h>
+#include "include/ae_queue.h"
 
 volatile register uint32_t __R31;
 
@@ -99,8 +100,6 @@ void init_adc()
 	 ADC_TSC.FIFO1THRESHOLD_bit.FIFO0_THRESHOLD_LEVEL = 50;
 	 ADC_TSC.FIFO0THRESHOLD_bit.FIFO0_THRESHOLD_LEVEL = 50;
 
-
-
 	/*
 	 * set the ADC_TSC CTRL register
 	 * set step configuration registers to protected
@@ -123,37 +122,8 @@ void fill_adc_queue() {
 	 */
 	values_in_fifo = ADC_TSC.FIFO0COUNT_bit.WORDS_IN_FIFO0;
 	while (values_in_fifo > 0) {
-		q_end_element = ADC_TSC.FIFO0DATA_bit.ADCDATA;
-		advance_q_end();
+    enqueue_adc_value(ADC_TSC.FIFO0DATA_bit.ADCDATA);
 		values_in_fifo--;
-
-		/**
-		 * If the queue is empty after adding and element to it, then we've
-		 * overflowed.
-		 */
-		if (is_q_empty()) {
-			q_overflowed = 1;
-		}
-	}
-}
-
-
-void empty_adc_queue(uint16_t* buffer_for_values, uint16_t* cnt_values_transferred) {
-	*cnt_values_transferred = 0;
-
-	/*
-	 * If queue has overflowed, then we need to read from q_end to q_end until
-	 * we've read it all. In other words, the q_start
-	 */
-	if (q_overflowed) {
-		rectify_overflow();
-		q_overflowed = 0;
-	}
-
-	while(!is_q_empty() && *cnt_values_transferred < MAX_UNLOAD_CNT_FROM_QUEUE) {
-		buffer_for_values[*cnt_values_transferred] = q_start_element;
-		advance_q_start();
-		*cnt_values_transferred++;
 	}
 }
 

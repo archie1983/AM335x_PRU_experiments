@@ -1,10 +1,14 @@
+#ifndef _AE_INTER_PRU_H_
+
+#define _AE_INTER_PRU_H_
+
 /*
  * Declarations for poking the other PRU core (PRU1)
  *
  * We need to map some event to go to PRU1. We don't want to use events 16, 17, 18, 19 because they
- * are used by RPMSG and the numbers are defined in the device tree, so unless we recompile the device 
+ * are used by RPMSG and the numbers are defined in the device tree, so unless we recompile the device
  * tree, it's best to leave them alone.
- * 
+ *
  * So we're going to choose something that is free- perhaps 20 seems like a nice number.
  */
 #define PRU0_PRU1_EVT (20)
@@ -14,7 +18,7 @@
  *
  * See page 210 in SPRUH73O–October 2011–Revised September 2016
  */
-#define PRU0_PRU1_TRIGGER (__R31 = (PRU0_PRU1_EVT - 16) | (1 << 5)) 
+#define PRU0_PRU1_TRIGGER (__R31 = (PRU0_PRU1_EVT - 16) | (1 << 5))
 #define LONG_CYCLE (5000000)
 #define SHORT_CYCLE     (500000)
 
@@ -31,3 +35,5 @@
 void pokePRU1Processor(void);
 void setUpInterPRU(void);
 void configIntc(void);
+
+#endif
