@@ -5,6 +5,7 @@
  * Declarations for ADC functionality
  */
 #include <stdint.h>
+#include <sys_tscAdcSs.h>
 
 #ifndef PRU_SRAM
 #define PRU_SRAM __far __attribute__((cregister("PRU_SHAREDMEM", near)))

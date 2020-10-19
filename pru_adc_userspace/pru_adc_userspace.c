@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
 		}
 	} else if (opt == 'r') {
 		printf("Reading V and I in Sentinel context\n");
-		size_t cnt_returned_values = readADCValuesForSentinel(value_buf_from_pru);
+		size_t cnt_returned_values = readADCValuesForSentinel(value_buf_from_pru) / 2; //# dividing by 2, because the number is bytes that were returned, but our data type (uint16_t) is 2 bytes long.
 		do {
 			cnt_returned_values--;
 			printf("CNT=%d , V=%d\n", cnt_returned_values, value_buf_from_pru[cnt_returned_values]);

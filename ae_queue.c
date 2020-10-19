@@ -20,7 +20,7 @@ void enqueue_adc_value(uint16_t value) {
  * Dequeues as many values as possible and puts them into the provided buffer.
  */
 void empty_adc_queue(uint16_t* buffer_for_values, uint16_t* cnt_values_transferred) {
-	*cnt_values_transferred = 0;
+	(*cnt_values_transferred) = 0;
 
 	/*
 	 * If queue has overflowed, then we need to read from q_end to q_end until
@@ -31,9 +31,18 @@ void empty_adc_queue(uint16_t* buffer_for_values, uint16_t* cnt_values_transferr
 		q_overflowed = 0;
 	}
 
-	while(!is_q_empty() && *cnt_values_transferred < MAX_UNLOAD_CNT_FROM_QUEUE) {
-		buffer_for_values[*cnt_values_transferred] = q_start_element;
+	while(!is_q_empty() && (*cnt_values_transferred) < MAX_UNLOAD_CNT_FROM_QUEUE) {
+		buffer_for_values[(*cnt_values_transferred)] = q_start_element;
 		advance_q_start();
-		*cnt_values_transferred++;
+    (*cnt_values_transferred)++;
 	}
+}
+
+/**
+ * Initialises queue
+ */
+void init_queue() {
+  q_start = 0;
+  q_end = 0;
+  q_overflowed = 0;
 }

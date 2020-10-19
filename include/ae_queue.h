@@ -78,6 +78,11 @@ uint8_t q_overflowed;
 void enqueue_adc_value(uint16_t value);
 
 /**
+ * Initialises queue
+ */
+void init_queue();
+
+/**
  * This function will store as many values as possible from the queue to the
  * passed buffer buffer_for_values. It will store the number of values
  * transferred into the cnt_values_transferred parameter.

@@ -36,10 +36,15 @@ int main(void)
      */
     init_adc();
 
+    __delay_cycles(100000000); //# 500ms wait
+
+    init_queue();
+
     /* Attempting to send a CAN data frame and a remote frame once every second */
     while (1) {
         //__delay_cycles(100000000); //# 500ms wait
-        __delay_cycles(1000000); //# 5ms wait
+        //__delay_cycles(1000000); //# 5ms wait
+        //__delay_cycles(200000); //# 1ms wait
         fill_adc_queue();
 
         serveCommsWithARMCore();
@@ -62,7 +67,14 @@ int main(void)
             if (cnt_elements_to_return > 0) {
               sendMessageToUserSpace((uint8_t *)return_buffer, cnt_elements_to_return * 2);
             } else {
-              sendMessageToUserSpace("I'm UP", 6);
+              return_buffer[0] = ADC_TSC.FIFO0COUNT_bit.WORDS_IN_FIFO0;
+              return_buffer[1] = ADC_TSC.FIFO0DATA_bit.ADCDATA;
+              return_buffer[2] = ADC_TSC.FIFO0DATA_bit.ADCDATA;
+              return_buffer[3] = ADC_TSC.FIFO0DATA_bit.ADCDATA;
+              return_buffer[4] = ADC_TSC.FIFO0DATA_bit.ADCDATA;
+
+              sendMessageToUserSpace((uint8_t *)return_buffer, 10);
+              //sendMessageToUserSpace("AAAA", 4);
             }
         } else if (strncmp ((char *)lastReceivedMessageFromUser, "test", 4) == 0) {
             strncpy((char *)lastReceivedMessageFromUser, "\0\0\0\0", 4);

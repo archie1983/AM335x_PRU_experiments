@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include "include/ae_adc.h"
 //#include "include/sys_tscAdcSs.h"
-#include <sys_tscAdcSs.h>
+//#include <sys_tscAdcSs.h>
 #include "include/ae_queue.h"
 
 volatile register uint32_t __R31;
@@ -120,10 +120,15 @@ void fill_adc_queue() {
 	/*
 	 * Read FIFO0 until there's nothing left and put all new data into the queue.
 	 */
-	values_in_fifo = ADC_TSC.FIFO0COUNT_bit.WORDS_IN_FIFO0;
-	while (values_in_fifo > 0) {
+	//values_in_fifo = ADC_TSC.FIFO0COUNT_bit.WORDS_IN_FIFO0;
+	// values_in_fifo = ADC_TSC.FIFO0COUNT;
+	// while (values_in_fifo > 0) {
+  //   enqueue_adc_value(ADC_TSC.FIFO0DATA_bit.ADCDATA);
+	// 	values_in_fifo--;
+	// }
+
+	while (ADC_TSC.FIFO0COUNT > 0) {
     enqueue_adc_value(ADC_TSC.FIFO0DATA_bit.ADCDATA);
-		values_in_fifo--;
 	}
 }
 
