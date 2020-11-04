@@ -6,6 +6,20 @@
 
 volatile register uint32_t __R31;
 
+/*
+ * Clear FIFO0 by reading from it
+ * We are using single-shot mode.
+ * It should not usually enter the for loop
+ */
+void flush_fifo0() {
+	uint32_t count = ADC_TSC.FIFO0COUNT;
+	uint32_t data;
+	uint32_t i;
+	for (i = 0; i < count; i++) {
+		data = ADC_TSC.FIFO0DATA;
+	}
+}
+
 /**
  * What we really want is a software continuous-shot mode, which averages 16 samples AND
  * puts it all into the FIFO0 for V and FIFO1 for I. Then this PRU code should act on
@@ -65,6 +79,8 @@ void init_adc()
 	ADC_TSC.CTRL_bit.ENABLE = 0;
 	ADC_TSC.CTRL_bit.STEPCONFIG_WRITEPROTECT_N_ACTIVE_LOW = 1;
 
+	flush_fifo0();
+
 	//# STEP1 for V channel
 	ADC_TSC.STEPCONFIG1_bit.MODE = 1; //# Software enabled, continuous
 	ADC_TSC.STEPCONFIG1_bit.AVERAGING = 4; //# Average 16 samples
@@ -76,29 +92,37 @@ void init_adc()
 	ADC_TSC.STEPDELAY1_bit.SAMPLEDELAY = 148; //# SAMPLEDELAY = 148 for 10KHz measurement frequency
 	ADC_TSC.STEPCONFIG1_bit.FIFO_SELECT = 0; //# FIFO0 for data
 
-	//# STEP2 for I channel
-	ADC_TSC.STEPCONFIG2_bit.MODE = 1; //# Software enabled, continuous
-	ADC_TSC.STEPCONFIG2_bit.AVERAGING = 4; //# Average 16 samples
-	ADC_TSC.STEPCONFIG2_bit.SEL_INP_SWC_3_0 = ADC_I_CHAN;
-	ADC_TSC.STEPCONFIG2_bit.SEL_INM_SWC_3_0 = 8; //# No negative differential input, because DIFF_CNTRL = 0 (by default, hence not even set)
-	ADC_TSC.STEPCONFIG2_bit.SEL_RFM_SWC_1_0 = 0; //# SEL_RFM pins SW configuration: 0 = VSSA, 3 = VREFN. Experiment with this.
-	ADC_TSC.STEPCONFIG2_bit.SEL_RFP_SWC_2_0 = 0; //# SEL_RFP pins SW configutation: 0 = VDDA_ADC, 3 = VREFP. Experiment with this.
-	ADC_TSC.STEPDELAY2_bit.OPENDELAY = 3; //# OPENDELAY = 3 for 10KHz measurement frequency
-	ADC_TSC.STEPDELAY2_bit.SAMPLEDELAY = 148; //# SAMPLEDELAY = 148 for 10KHz measurement frequency
-	ADC_TSC.STEPCONFIG2_bit.FIFO_SELECT = 1; //# FIFO1 for data
+	// //# STEP2 for I channel
+	// ADC_TSC.STEPCONFIG2_bit.MODE = 1; //# Software enabled, continuous
+	// ADC_TSC.STEPCONFIG2_bit.AVERAGING = 4; //# Average 16 samples
+	// ADC_TSC.STEPCONFIG2_bit.SEL_INP_SWC_3_0 = ADC_I_CHAN;
+	// ADC_TSC.STEPCONFIG2_bit.SEL_INM_SWC_3_0 = 8; //# No negative differential input, because DIFF_CNTRL = 0 (by default, hence not even set)
+	// ADC_TSC.STEPCONFIG2_bit.SEL_RFM_SWC_1_0 = 0; //# SEL_RFM pins SW configuration: 0 = VSSA, 3 = VREFN. Experiment with this.
+	// ADC_TSC.STEPCONFIG2_bit.SEL_RFP_SWC_2_0 = 0; //# SEL_RFP pins SW configutation: 0 = VDDA_ADC, 3 = VREFP. Experiment with this.
+	// ADC_TSC.STEPDELAY2_bit.OPENDELAY = 3; //# OPENDELAY = 3 for 10KHz measurement frequency
+	// ADC_TSC.STEPDELAY2_bit.SAMPLEDELAY = 148; //# SAMPLEDELAY = 148 for 10KHz measurement frequency
+	// ADC_TSC.STEPCONFIG2_bit.FIFO_SELECT = 1; //# FIFO1 for data
 
 	/**
-	 * Mask the FIFO buffer interrupts - both for overflow and underflow
+	 * Mask the FIFO buffer interrupts - both for overflow and underflow and also for the end of sequence
 	 */
 	 ADC_TSC.IRQENABLE_CLR_bit.FIFO0_OVERRUN = 1;
 	 ADC_TSC.IRQENABLE_CLR_bit.FIFO0_UNDERFLOW = 1;
-	 ADC_TSC.IRQENABLE_CLR_bit.FIFO0_THRESHOLD = 1;
-	 ADC_TSC.IRQENABLE_CLR_bit.FIFO1_OVERRUN = 1;
-	 ADC_TSC.IRQENABLE_CLR_bit.FIFO1_UNDERFLOW = 1;
-	 ADC_TSC.IRQENABLE_CLR_bit.FIFO1_THRESHOLD = 1;
 
-	 ADC_TSC.FIFO1THRESHOLD_bit.FIFO0_THRESHOLD_LEVEL = 50;
-	 ADC_TSC.FIFO0THRESHOLD_bit.FIFO0_THRESHOLD_LEVEL = 50;
+	 //ADC_TSC.IRQENABLE_CLR_bit.END_OF_SEQUENCE = 1;
+
+	 // ADC_TSC.IRQENABLE_CLR_bit.FIFO1_OVERRUN = 1;
+	 // ADC_TSC.IRQENABLE_CLR_bit.FIFO1_UNDERFLOW = 1;
+
+	ADC_TSC.FIFO1THRESHOLD_bit.FIFO0_THRESHOLD_LEVEL = 64;
+	ADC_TSC.IRQENABLE_SET_bit.FIFO0_THRESHOLD = 1;
+
+	 /**
+	  * We will want to trigger on FIFO threshold though
+		*/
+// 	 ADC_TSC.FIFO0THRESHOLD_bit.FIFO1_THRESHOLD_LEVEL = 64;
+
+//	 ADC_TSC.IRQENABLE_SET_bit.FIFO1_THRESHOLD = 1;
 
 	/*
 	 * set the ADC_TSC CTRL register
@@ -107,8 +131,14 @@ void init_adc()
 	 * Enable TSC_ADC_SS module
 	 */
 	ADC_TSC.CTRL_bit.STEPCONFIG_WRITEPROTECT_N_ACTIVE_LOW = 0;
-	ADC_TSC.CTRL_bit.STEP_ID_TAG = 1;
+	ADC_TSC.CTRL_bit.STEP_ID_TAG = 0;
 	ADC_TSC.CTRL_bit.ENABLE = 1;
+
+	/*
+	 * VERY IMPORTANT STEP: :) This delayed me for days. Turns out that even in continuous mode, you
+	 * still need to enable your steps.
+	 */
+	ADC_TSC.STEPENABLE_bit.STEP1 = 1;
 }
 
 uint8_t values_in_fifo = 0;
@@ -127,24 +157,25 @@ void fill_adc_queue() {
 	// 	values_in_fifo--;
 	// }
 
-	while (ADC_TSC.FIFO0COUNT > 0) {
-    enqueue_adc_value(ADC_TSC.FIFO0DATA_bit.ADCDATA);
-	}
-}
+	// while (ADC_TSC.FIFO0COUNT > 0) {
+  //   enqueue_adc_value(ADC_TSC.FIFO0DATA_bit.ADCDATA);
+	// }
 
-uint16_t read_adc(uint16_t adc_chan)
-{
-	/*
-	 * Clear FIFO0 by reading from it
-	 * We are using single-shot mode.
-	 * It should not usually enter the for loop
-	 */
 	uint32_t count = ADC_TSC.FIFO0COUNT;
 	uint32_t data;
 	uint32_t i;
 	for (i = 0; i < count; i++) {
-		data = ADC_TSC.FIFO0DATA;
+		enqueue_adc_value(ADC_TSC.FIFO0DATA);
 	}
+}
+
+void fill_adc_queue_test() {
+	enqueue_adc_value(q_end);
+}
+
+uint16_t read_adc(uint16_t adc_chan)
+{
+	flush_fifo0();
 
 	/* read from the specified ADC channel */
 	switch (adc_chan) {

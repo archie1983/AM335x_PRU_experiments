@@ -46,6 +46,8 @@
 #include <unistd.h>
 #include <errno.h>
 
+//#include "matrix.h"
+
 #define RPMSG_MESSAGE_SIZE           496
 
 /**
@@ -81,6 +83,9 @@ int main(int argc, char *argv[])
 {
 	char opt;
 	char *charVoltage;
+
+	// Matrix m(3, 2);
+	// m.print();
 
 	/* Parse the command line options  */
 	opt = getopt(argc, argv, "cr:");

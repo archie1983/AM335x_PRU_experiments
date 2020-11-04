@@ -30,5 +30,6 @@ uint16_t read_adc(uint16_t adc_chan);
  * queue with the appropriate pointer updates.
  */
 void fill_adc_queue();
+void fill_adc_queue_test();
 
 #endif
