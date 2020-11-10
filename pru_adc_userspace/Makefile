@@ -1,14 +1,14 @@
-# CC environment variable must be set using the environment script of our Yocto build SDK, 
+# CC environment variable must be set using the environment script of our Yocto build SDK,
 # e.g.: /home/arturs/CoreLab_Work/Yocto/SDKs/BSP-Yocto-AM335x-PD19.1.1/environment-setup-cortexa8hf-neon-phytec-linux-gnueabi
 #
-# in the end CC environment variable should be something like this: 
+# in the end CC environment variable should be something like this:
 # CC=arm-phytec-linux-gnueabi-gcc  -march=armv7-a -marm -mfpu=neon -mfloat-abi=hard -mcpu=cortex-a8 --sysroot=/home/arturs/CoreLab_Work/Yocto/SDKs/BSP-Yocto-AM335x-PD19.1.1/sysroots/cortexa8hf-neon-phytec-linux-gnueabi
 ifndef CC
 define ERROR_BODY
 
 ************************************************************
 CC cross-compiler environment variable is not set.
-Please source your Yocto build SDK environment variables' setting script, 
+Please source your Yocto build SDK environment variables' setting script,
 e.g.: /home/arturs/CoreLab_Work/Yocto/SDKs/BSP-Yocto-AM335x-PD19.1.1/environment-setup-cortexa8hf-neon-phytec-linux-gnueabi
 ************************************************************
 
@@ -66,4 +66,3 @@ clean:
 	@echo 'Finished cleaning project: $(PROJ_NAME)'
 	@echo '************************************************************'
 	@echo ''
-
